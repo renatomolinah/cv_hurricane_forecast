@@ -1,13 +1,20 @@
-######### Hurricane Survey Project -- Data Set Up Script 6/21/20
+######### Hurricane Survey Project --
 
-##libraries
+
+# Libraries ---------------------------------------------------------------
+
 library(tidyverse)
 library(tidylog)
+library(here)
+library(sf) 
+library(maps)
+
+# Raw Survey Setup --------------------------------------------------------
 
 # Michael
-
 #Load data
-michael <- read.csv("./InputData/HurricaneMichael_FinalData.csv", comment.char="#",
+michael <- read.csv(here("InputData", "HurricaneMichael_FinalData.csv"), 
+                    comment.char="#",
                     stringsAsFactors = FALSE)
 
 # Get rid of extra rows
@@ -286,22 +293,191 @@ michael <- michael %>% mutate(first = substr(FL_44_DO, 0, 5),
                          ifelse(Q21 == "Likely", 4, 
                                 ifelse(Q21 == "Somewhat likely", 3, 
                                        ifelse(Q21 == "Moderately likely", 2,
-                                              ifelse(Q21 == "Not likely", 1, ""))))))
+                                              ifelse(Q21 == "Not likely", 1, "")))))) %>%
+  separate(Q19, c("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"), sep = ",") %>%
+  mutate(A = ifelse(a == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(a == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(a == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(a == "I would like to see these changes implemented", 4, 
+                                         ifelse(a == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(a == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(a == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(a == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(a == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(a == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(a == "Other", 10,
+                                                                                          ifelse(a == " please specify", 10, 11)))))))))))),
+         B = ifelse(b == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(b == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(b == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(b == "I would like to see these changes implemented", 4, 
+                                         ifelse(b == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(b == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(b == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(b == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(b == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(b == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(b == "Other", 10,
+                                                                                          ifelse(b == " please specify", 10, 11)))))))))))),
+         C = ifelse(c == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(c == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(c == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(c == "I would like to see these changes implemented", 4, 
+                                         ifelse(c == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(c == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(c == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(c == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(c == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(c == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(c == "Other", 10,
+                                                                                          ifelse(c == " please specify", 10, 11)))))))))))),
+         D = ifelse(d == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(d == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(d == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(d == "I would like to see these changes implemented", 4, 
+                                         ifelse(d == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(d == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(d == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(d == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(d == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(d == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(d == "Other", 10,
+                                                                                          ifelse(d == " please specify", 10, 11)))))))))))),
+         E = ifelse(e == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(e == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(e == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(e == "I would like to see these changes implemented", 4, 
+                                         ifelse(e == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(e == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(e == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(e == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(e == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(e == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(e == "Other", 10,
+                                                                                          ifelse(e == " please specify", 10, 11)))))))))))),
+         Ff = ifelse(f == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                     ifelse(f == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                            ifelse(f == "I believe that funding this project is well worth it to me", 3, 
+                                   ifelse(f == "I would like to see these changes implemented", 4, 
+                                          ifelse(f == " but I cannot afford to pay much for it", 4, 
+                                                 ifelse(f == "It was difficult for me to decide which option to choose", 5, 
+                                                        ifelse(f == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                               ifelse(f == "I am not worried about hurricanes", 7, 
+                                                                      ifelse(f == "I did not read the information on the proposal carefully", 8, 
+                                                                             ifelse(f == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                    ifelse(f == "Other", 10,
+                                                                                           ifelse(f == " please specify", 10, 11)))))))))))),
+         G = ifelse(g == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(g== "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(g == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(g == "I would like to see these changes implemented", 4, 
+                                         ifelse(g == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(g == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(g == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(g == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(g == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(g == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(g == "Other", 10,
+                                                                                          ifelse(g == " please specify", 10, 11)))))))))))),
+         H = ifelse(h == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(h == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(h == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(h == "I would like to see these changes implemented", 4, 
+                                         ifelse(h == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(h == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(h == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(h == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(h == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(h == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(h == "Other", 10,
+                                                                                          ifelse(h == " please specify", 10, 11)))))))))))),
+         I = ifelse(i == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(i == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(i == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(i == "I would like to see these changes implemented", 4, 
+                                         ifelse(i == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(i == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(i == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(i == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(i == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(i == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(i == "Other", 10,
+                                                                                          ifelse(i == " please specify", 10, 11)))))))))))),
+         J = ifelse(j == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(j == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(j == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(j == "I would like to see these changes implemented", 4, 
+                                         ifelse(j == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(j == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(j == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(j == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(j == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(j == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(j == "Other", 10,
+                                                                                          ifelse(j == " please specify", 10, 11)))))))))))),
+         K = ifelse(k == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(k == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(k == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(k == "I would like to see these changes implemented", 4, 
+                                         ifelse(k == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(k == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(k == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(k == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(k == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(k == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(k == "Other", 10,
+                                                                                          ifelse(k == " please specify", 10, 11)))))))))))),
+         L = ifelse(l == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(l == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(l == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(l == "I would like to see these changes implemented", 4, 
+                                         ifelse(l == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(l == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(l == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(l == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(l == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(l == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(l == "Other", 10,
+                                                                                          ifelse(l == " please specify", 10, 11)))))))))))),
+         tax = ifelse(A == 1 | B == 1 | C == 1 | D == 1 | E == 1 | Ff == 1 | G == 1 | H == 1 | I == 1 | J == 1 | K == 1 | L == 1, 1, 0),
+         personal = ifelse(A == 2 | B == 2 | C == 2 | D == 2| E == 2| Ff == 2 | G == 2| H == 2| I == 2| J == 2| K == 2| L == 2, 1, 0), 
+         worth = ifelse(A == 3 | B == 3| C == 3 | D == 3 | E == 3 | Ff == 3 | G == 3| H == 3 | I == 3 | J == 3 | K == 3| L == 3, 1, 0), 
+         costly = ifelse(A == 4| B == 4| C == 4 | D == 4| E == 4| Ff == 4| G == 4| H == 4| I == 4 | J == 4| K == 4| L == 4, 1, 0), 
+         conflicted = ifelse(A == 5 | B == 5| C == 5| D ==5 | E ==5 | Ff == 5| G == 5| H == 5| I == 5| J == 5 | K ==5 | L == 5, 1, 0), 
+         incomplete = ifelse(A == 6 | B ==6 | C == 6| D ==6 | E == 6| Ff ==6 | G == 6| H == 6| I == 6| J == 6| K == 6| L == 6, 1, 0), 
+         delusional = ifelse(A == 7| B == 7 | C == 7| D == 7| E == 7| Ff ==7 | G ==7 | H == 7| I == 7| J == 7 | K == 7| L ==7, 1, 0), 
+         skimmed = ifelse(A == 8 | B == 8 | C ==8 | D == 8| E == 8 | Ff == 8 | G == 8 | H == 8| I == 8| J == 8 | K == 8| L ==8, 1, 0), 
+         trust = ifelse(A == 9| B == 9 | C == 9| D == 9| E ==9 | Ff ==9 | G == 9 | H ==9| I ==9| J == 9 | K == 9| L == 9, 1, 0), 
+         other = ifelse(A == 10 | B == 10| C == 10| D == 10 | E == 10 | Ff == 10 | G == 10| H == 10 | I == 10 | J == 10| K == 10| L == 10, 1, 0), 
+         bad = ifelse(A == 11 | B == 11| C == 11| D == 11| E == 11| Ff == 11| G ==11 | H == 11| I == 11| J ==11 | K == 11| L == 11, 1, 0))
 
 # select relevant variables 
-data_michael <- michael %>% select(hurricane, zip, age, female, owner, tenure, insured, short_risk, long_risk,
+data_michael <- michael %>% select(Duration..in.seconds., 
+                                   hurricane, zip, age, female, owner, tenure, insured, short_risk, long_risk,
                                    hurricane_awareness, fema_awareness, nfip_awareness, experience, told,
                                    evacuate, damage, loss, displaced, influenced, hh_size, hh_dependent,
                                    rain_att, wind_att, surge_att, track_att,
                                    track_order, wind_order, rain_order, track_rate, wind_rate, rain_rate,
                                    track_bid1, wind_bid1, rain_bid1, track_answer1, wind_answer1, rain_answer1,
                                    track_bid2, wind_bid2, rain_bid2, track_answer2, wind_answer2, rain_answer2, 
-                                   voice, action)
+                                   voice, action, tax, personal, worth, costly, conflicted, incomplete, 
+                                   delusional, skimmed, trust, other) %>%
+  mutate(tax = ifelse(is.na(tax), 0, tax), 
+         personal = ifelse(is.na(personal), 0, personal), 
+         worth = ifelse(is.na(worth), 0, worth), 
+         costly = ifelse(is.na(costly), 0, costly), 
+         conflicted = ifelse(is.na(conflicted), 0, costly), 
+         incomplete = ifelse(is.na(incomplete), 0, incomplete), 
+         delusional = ifelse(is.na(delusional), 0, delusional), 
+         skimmed = ifelse(is.na(skimmed), 0, skimmed), 
+         trust = ifelse(is.na(trust), 0, trust), 
+         other = ifelse(is.na(other), 0, other))
 
 # Florence
 
 #Load data
-florence <- read.csv("./InputData/HurricaneFlorence_FinalData.csv", comment.char="#",
+florence <- read.csv(here("InputData", "HurricaneFlorence_FinalData.csv"), 
+                     comment.char="#",
                      stringsAsFactors = FALSE)
 
 # Get rid of extra rows
@@ -580,40 +756,200 @@ florence <- florence %>% mutate(first = substr(FL_44_DO, 0, 5),
                          ifelse(Q21 == "Likely", 4, 
                                 ifelse(Q21 == "Somewhat likely", 3, 
                                        ifelse(Q21 == "Moderately likely", 2,
-                                              ifelse(Q21 == "Not likely", 1, ""))))))
-
+                                              ifelse(Q21 == "Not likely", 1, "")))))) %>%
+  separate(Q19, c("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"), sep = ",") %>%
+  mutate(A = ifelse(a == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(a == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(a == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(a == "I would like to see these changes implemented", 4, 
+                                         ifelse(a == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(a == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(a == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(a == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(a == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(a == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(a == "Other", 10,
+                                                                                          ifelse(a == " please specify", 10, 11)))))))))))),
+         B = ifelse(b == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(b == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(b == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(b == "I would like to see these changes implemented", 4, 
+                                         ifelse(b == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(b == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(b == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(b == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(b == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(b == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(b == "Other", 10,
+                                                                                          ifelse(b == " please specify", 10, 11)))))))))))),
+         C = ifelse(c == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(c == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(c == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(c == "I would like to see these changes implemented", 4, 
+                                         ifelse(c == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(c == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(c == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(c == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(c == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(c == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(c == "Other", 10,
+                                                                                          ifelse(c == " please specify", 10, 11)))))))))))),
+         D = ifelse(d == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(d == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(d == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(d == "I would like to see these changes implemented", 4, 
+                                         ifelse(d == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(d == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(d == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(d == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(d == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(d == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(d == "Other", 10,
+                                                                                          ifelse(d == " please specify", 10, 11)))))))))))),
+         E = ifelse(e == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(e == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(e == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(e == "I would like to see these changes implemented", 4, 
+                                         ifelse(e == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(e == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(e == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(e == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(e == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(e == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(e == "Other", 10,
+                                                                                          ifelse(e == " please specify", 10, 11)))))))))))),
+         Ff = ifelse(f == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                     ifelse(f == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                            ifelse(f == "I believe that funding this project is well worth it to me", 3, 
+                                   ifelse(f == "I would like to see these changes implemented", 4, 
+                                          ifelse(f == " but I cannot afford to pay much for it", 4, 
+                                                 ifelse(f == "It was difficult for me to decide which option to choose", 5, 
+                                                        ifelse(f == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                               ifelse(f == "I am not worried about hurricanes", 7, 
+                                                                      ifelse(f == "I did not read the information on the proposal carefully", 8, 
+                                                                             ifelse(f == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                    ifelse(f == "Other", 10,
+                                                                                           ifelse(f == " please specify", 10, 11)))))))))))),
+         G = ifelse(g == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(g== "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(g == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(g == "I would like to see these changes implemented", 4, 
+                                         ifelse(g == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(g == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(g == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(g == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(g == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(g == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(g == "Other", 10,
+                                                                                          ifelse(g == " please specify", 10, 11)))))))))))),
+         H = ifelse(h == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(h == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(h == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(h == "I would like to see these changes implemented", 4, 
+                                         ifelse(h == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(h == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(h == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(h == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(h == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(h == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(h == "Other", 10,
+                                                                                          ifelse(h == " please specify", 10, 11)))))))))))),
+         I = ifelse(i == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(i == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(i == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(i == "I would like to see these changes implemented", 4, 
+                                         ifelse(i == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(i == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(i == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(i == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(i == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(i == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(i == "Other", 10,
+                                                                                          ifelse(i == " please specify", 10, 11)))))))))))),
+         J = ifelse(j == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(j == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(j == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(j == "I would like to see these changes implemented", 4, 
+                                         ifelse(j == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(j == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(j == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(j == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(j == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(j == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(j == "Other", 10,
+                                                                                          ifelse(j == " please specify", 10, 11)))))))))))),
+         K = ifelse(k == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(k == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(k == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(k == "I would like to see these changes implemented", 4, 
+                                         ifelse(k == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(k == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(k == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(k == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(k == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(k == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(k == "Other", 10,
+                                                                                          ifelse(k == " please specify", 10, 11)))))))))))),
+         L = ifelse(l == "I believe that my taxes are too high already and am against any initiative that will increase them", 1 ,
+                    ifelse(l == "I feel that homes and businesses in areas at risk should cover their own losses", 2, 
+                           ifelse(l == "I believe that funding this project is well worth it to me", 3, 
+                                  ifelse(l == "I would like to see these changes implemented", 4, 
+                                         ifelse(l == " but I cannot afford to pay much for it", 4, 
+                                                ifelse(l == "It was difficult for me to decide which option to choose", 5, 
+                                                       ifelse(l == "I do not have enough information on this issue to make a comfortable decision", 6, 
+                                                              ifelse(l == "I am not worried about hurricanes", 7, 
+                                                                     ifelse(l == "I did not read the information on the proposal carefully", 8, 
+                                                                            ifelse(l == "I do not trust the federal government to solve this serious problem", 9,
+                                                                                   ifelse(l == "Other", 10,
+                                                                                          ifelse(l == " please specify", 10, 11)))))))))))),
+         tax = ifelse(A == 1 | B == 1 | C == 1 | D == 1 | E == 1 | Ff == 1 | G == 1 | H == 1 | I == 1 | J == 1 | K == 1 | L == 1, 1, 0),
+         personal = ifelse(A == 2 | B == 2 | C == 2 | D == 2| E == 2| Ff == 2 | G == 2| H == 2| I == 2| J == 2| K == 2| L == 2, 1, 0), 
+         worth = ifelse(A == 3 | B == 3| C == 3 | D == 3 | E == 3 | Ff == 3 | G == 3| H == 3 | I == 3 | J == 3 | K == 3| L == 3, 1, 0), 
+         costly = ifelse(A == 4| B == 4| C == 4 | D == 4| E == 4| Ff == 4| G == 4| H == 4| I == 4 | J == 4| K == 4| L == 4, 1, 0), 
+         conflicted = ifelse(A == 5 | B == 5| C == 5| D ==5 | E ==5 | Ff == 5| G == 5| H == 5| I == 5| J == 5 | K ==5 | L == 5, 1, 0), 
+         incomplete = ifelse(A == 6 | B ==6 | C == 6| D ==6 | E == 6| Ff ==6 | G == 6| H == 6| I == 6| J == 6| K == 6| L == 6, 1, 0), 
+         delusional = ifelse(A == 7| B == 7 | C == 7| D == 7| E == 7| Ff ==7 | G ==7 | H == 7| I == 7| J == 7 | K == 7| L ==7, 1, 0), 
+         skimmed = ifelse(A == 8 | B == 8 | C ==8 | D == 8| E == 8 | Ff == 8 | G == 8 | H == 8| I == 8| J == 8 | K == 8| L ==8, 1, 0), 
+         trust = ifelse(A == 9| B == 9 | C == 9| D == 9| E ==9 | Ff ==9 | G == 9 | H ==9| I ==9| J == 9 | K == 9| L == 9, 1, 0), 
+         other = ifelse(A == 10 | B == 10| C == 10| D == 10 | E == 10 | Ff == 10 | G == 10| H == 10 | I == 10 | J == 10| K == 10| L == 10, 1, 0), 
+         bad = ifelse(A == 11 | B == 11| C == 11| D == 11| E == 11| Ff == 11| G ==11 | H == 11| I == 11| J ==11 | K == 11| L == 11, 1, 0))
 
 # select relevant variables 
-data_florence <- florence %>% select(hurricane, zip, age, female, owner, tenure, insured, short_risk, long_risk,
+data_florence <- florence %>% select(Duration..in.seconds., 
+                                     hurricane, zip, age, female, owner, tenure, insured, short_risk, long_risk,
                                      hurricane_awareness, fema_awareness, nfip_awareness, experience, told,
                                      evacuate, damage, loss, displaced, influenced, hh_size, hh_dependent,
                                      rain_att, wind_att, surge_att, track_att,
                                      track_order, wind_order, rain_order, track_rate, wind_rate, rain_rate,
                                      track_bid1, wind_bid1, rain_bid1, track_answer1, wind_answer1, rain_answer1,
-                                     track_bid2, wind_bid2, rain_bid2, track_answer2, wind_answer2, rain_answer2,
-                                     voice, action)
+                                     track_bid2, wind_bid2, rain_bid2, track_answer2, wind_answer2, rain_answer2, 
+                                     voice, action, tax, personal, worth, costly, conflicted, incomplete, 
+                                     delusional, skimmed, trust, other) %>%
+  mutate(tax = ifelse(is.na(tax), 0, tax), 
+         personal = ifelse(is.na(personal), 0, personal), 
+         worth = ifelse(is.na(worth), 0, worth), 
+         costly = ifelse(is.na(costly), 0, costly), 
+         conflicted = ifelse(is.na(conflicted), 0, costly), 
+         incomplete = ifelse(is.na(incomplete), 0, incomplete), 
+         delusional = ifelse(is.na(delusional), 0, delusional), 
+         skimmed = ifelse(is.na(skimmed), 0, skimmed), 
+         trust = ifelse(is.na(trust), 0, trust), 
+         other = ifelse(is.na(other), 0, other))
 
 
 
 # Stack the two datasets
 
 data <- rbind(data_florence,data_michael) %>% mutate(florence = ifelse(hurricane == "florence",1,0))
-data = data %>%
+survey = data %>%
   mutate(index = row_number())
 
-##matt's write out(i stop here EVERYTIME)
-data.table::fwrite(data, "./OutputData/Survey_Data_Cleaned.csv")
-
-#### ZCTA_Control Data Set UP ####
-
-rm(list = ls())
 
 
-data = data.table::fread("./InputData/ACSDP5Y2018/income_sex_byzip.csv")
+# ZCTA Controls 2018 5YR --------------------------------------------------
+ACS2018 = data.table::fread(here("InputData", "ACSDP5Y2018", "income_sex_byzip.csv"))
 
-data.df1 = data[-1,]
-
-data.df = data.df1 %>%
+ACS2018.df = ACS2018[-1,] %>%
   select(1, 3, 7, 11, 15, 19, 20) %>%
   rename(geoid = GEO_ID, 
          tot.pop = DP05_0021E,
@@ -628,242 +964,67 @@ data.df = data.df1 %>%
          fem.pop = as.numeric(fem.pop), 
          med.inc = as.numeric(med.inc),
          mean.inc = as.numeric(mean.inc),
-         mean.inc.moe = as.numeric(mean.inc.moe))
+         mean.inc.moe = as.numeric(mean.inc.moe)) 
 
-data.table::fwrite(data.df, "./OututData/ZCTA_AvgData.csv")
 
-####Spatial Set up (ZCTAs) for Survey and WindSwath Data sets####
-rm(list = ls())
-
-library(sf)
-library(maps)
+# Spatial Set Up for Survey Data ------------------------------------------
 
 ##epsg:102003 is USA Contiguous Albers Equal Area Conic
 
-##data 
+##Data Sets We Have:: 
+  ##survey - Survey Data 
+  ##ACS2018.df - ZCTA controls
 
+##New Data
 ##state fips codes 
 data(state.fips)
 
-##original windswath speeds by county from RENATO
-wind.swaths = data.table::fread("./InputData/Windswath_Original.csv") %>%
-  mutate(index = row_number())
-
-##original survey data from Hurricanes Florence and Michael form Qualtrics 
-survey = data.table::fread("./OutputData/Survey_Data_Cleaned.csv")
-
-##counties shapefile from 2019 county lines
-counties = sf::st_read("./InputData/tl_2019_us_county/tl_2019_us_county.shp", 
-                       stringsAsFactors = FALSE) %>%
-  mutate(STATEFP = as.numeric(STATEFP)) %>%
-  st_transform(102003) %>%
-  select(statefp = STATEFP,
-         countyfp = COUNTYFP, 
-         name = NAMELSAD, 
-         geometry) %>%
-  mutate(county.name = str_to_lower(name, locale = "en")) %>%
-  select(-name)
-
-##zcta tracks from 2019 zcta definitions --> zcta with geometries 
-zcta = st_read("./InputData/tl_2019_us_zcta510/tl_2019_us_zcta510.shp", 
-               stringsAsFactors = F) %>%
+##ZCTA Tracks (2019) 
+zcta = st_read(here("InputData", "tl_2019_us_zcta510", "tl_2019_us_zcta510.shp")) %>%
   select(zcta = ZCTA5CE10,
          geometry) %>%
-  st_transform(102003)
-
-##zcta control attributes from ACSDP5Y2018 --> income and population 
-zcta.atts = data.table::fread("./OutputData/ZCTA_AvgData.csv", 
-                              colClasses = c(zcta = "character"))
-
-## Joining WindSwath to StateFIPS for FIPS id and State Abbreviations 
-wind.swaths.st.fips = left_join(wind.swaths, 
-                                state.fips %>%
-                                  select(fips, abb, polyname), 
-                                by = c("state" = "polyname")) %>%
-  mutate(abb = replace(abb, which(state == "virginia"), "VA"),
-         fips = replace(fips, which(state == "virginia"), 51),
-         abb = replace(abb, which(state == "massachusetts"), "MA"),
-         fips = replace(fips, which(state == "massachusetts"), 25),
-         abb = replace(abb, which(state == "north carolina"), "NC"),
-         fips = replace(fips, which(state == "north carolina"), 37),
-         abb = replace(abb, which(state == "new york"), "NY"),
-         fips = replace(fips, which(state == "new york"), 36)) %>%
-  mutate(unique.name = paste(state, county, sep = " "))
-
-##Adding State Names to Counties Data Set 
-counties.state = inner_join(counties, 
-                            wind.swaths.st.fips %>%
-                              select(state, fips) %>%
-                              distinct(fips, .keep_all = T),
-                            by = c("statefp" = "fips")) %>%
-  select(statefp, state, countyfp, county.name, geometry)
-
-##Removing "county" and "parish" in county.name (for joining with windswath) 
-RemoveWords = function(str, badword){
-  x = unlist(strsplit(str, " "))
-  paste(x[!x %in% badword], collapse = " ")
-}
-
-counties.remv.county = apply(data.frame(counties.state$county.name), 1, RemoveWords, badword = "county")
-counties.remv.parish = sapply(counties.remv.county, RemoveWords, badword = "parish")
-counties.clean.name = cbind(counties.state, counties.remv.parish) %>%
-  select(statefp, state, countyfp, county = counties.remv.parish, geometry) %>%
-  mutate(statefp = as.character(statefp),
-         county = as.character(county))
-
-##Fix the County Names that don't match with WindSwath Data Set (for joining) 
-counties.for.join = counties.clean.name %>%
-  mutate(county = replace(county, which(state == "missouri" & county == "ste. genevieve"), "ste genevieve"),
-         county = replace(county, which(state == "maryland" & county == "st. mary's"), "st. marys"), 
-         county = replace(county, which(state == "maryland" & county == "queen anne's"), "queen annes"),
-         county = replace(county, which(state == "maryland" & county == "prince george's"), "prince georges"),
-         county = replace(county, which(state == "virginia" & county == "newport news city"), "newport news"), 
-         county = replace(county, which((state == "tennessee" | state == "alabama" | state == "georgia") &
-                                          county == "dekalb"), "de kalb"),
-         county = replace(county, which(state == "virginia" & county == "virginia beach city"), "virginia beach"),
-         county = replace(county, which(state == "florida" & county == "desoto"), "de soto"),
-         county = replace(county, which(state == "mississippi" & county == "desoto"), "de soto"),
-         county = replace(county, which(state == "virginia" & county == "suffolk city"), "suffolk"),
-         county = replace(county, which(state == "virginia" & county == "norfolk city"), "norfolk"),
-         county = replace(county, which(state == "virginia" & county == "hampton city"), "hampton"),
-         county = replace(county, which(state == "district of columbia" & county == "district of columbia"), "washington"),
-         county = replace(county, which(state == "texas" & county == "dewitt"), "de witt"),
-         county = replace(county, which(state == "louisiana" & county == "lasalle"), "la salle")) %>%
-  mutate(unique.name = paste(state, county, sep = " "))
+  st_transform('ESRI:102003')
 
 ##Convert Survey Zips to ZCTAs: Add ZCTA Geometries and ZCTA Socioeconomic Attributes 
-
-##zips that didn't have 1 to 1 zcta 
+##ID Zips not 1 to 1 ZCTA
 bad.zips = setdiff(survey$zip, zcta$zcta) 
 ##serached on https://www.udsmapper.org/zcta-crosswalk.cfm
 rep.zcta = c(28409, 27330, 29501, 27705, 27408, 28504, 28540, 28112, 27546, 27705, 28401, 27403, 
              27707, 28387, 27403, 29577, 29526, 28411, 28374, 27252, 28540, 31701, 32305, 32304,
              39817, 32304, 32401, 32310, 31705, 32405, 31021, 32327, 31015, 32303, 31701)
-
+##rename
 survey.zcta = survey %>%
   mutate(zcta = zip)
-##replace zips with zctas that don't match 1 to 1 
+##For Bad ZIPS --> ZCTA, we replace with searched ZCTA
 survey.zcta$zcta = rep.zcta[match(survey.zcta$zcta, bad.zips)]
 
-##fill in ZCTA NAs with zips that match 1 to 1 with zctas. 
+##Fill ZCTA NAs with  1 to 1 match ZIPs with ZCTAs. 
 survey.fixed.zcta = survey.zcta %>%
   mutate(zcta = ifelse(is.na(zcta), zip, zcta),
          zcta = as.character(zcta))
 
-##add zcta geometries to survey data set 
+##ZCTA Geometries for Survey 
 survey.zcta.sf = inner_join(survey.fixed.zcta,
                             zcta, 
                             by = "zcta") %>%
-  st_as_sf(crs = 102003)
+  st_as_sf(crs = 'ESRI:102003')
 
-##attach ZCTA attributes to Survey Data Set 
+##ACS2018
 survey.atts = inner_join(survey.zcta.sf, 
-                         zcta.atts, 
-                         by = c("zcta"))
-
-##attach state and county names to Survey Data Set (keeps ZCTA geometries) 
-survey.full = st_join(survey.atts, 
-                      counties.for.join, 
-                      left = F, ##drop ZCTAs not within any counties 
-                      join = st_within, ##join by ZCTAs within counties 
-                      largest = T)
+                         ACS2018.df, 
+                         by = "zcta")
 
 
-st_write(survey.full, "./OutputData/SurveyData_ZCTAttribs.gpkg")
-data.table::fwrite(st_drop_geometry(survey.full), "./OutputData/SurveyData_ZCTAttribs.csv")
+# ZCTA Housing Data ACS(2017) with Survey -------------------------------------------
 
-##Add County FIP and County Geometry to WindSwaths Datat Set 
-wind.sf = inner_join(wind.swaths.st.fips, 
-                     counties.for.join %>%
-                       select(countyfp, unique.name, geometry), 
-                     by = "unique.name") %>%
-  select(statefp = fips, countyfp, state, abb, county, unique.name,
-         hurricane, bt_speed_max, bt_speed_min, bt_speed_mean, bt_speed_median, geometry) %>%
-  st_as_sf(sf_column_name = "geometry")
+##Data Sets We Need:: 
+    ## survey.atts = Survey Raw + ZCTA Demo Attribures and Geom 
 
-##write out 
-st_write(wind.sf, "./OutputData/Windswath_ST_CNTY.gpkg")
-
-
-##Create Data Set of WindSwaths with ZCTA number and geometry 
-##Break apart by hurricane since, some counties experience multiple hurricanes and don't want those thrown out
-michael.wind = wind.sf %>%
-  filter(hurricane == "michael")
-michael.zcta = st_join(zcta, 
-                       michael.wind, 
-                       join = st_within, 
-                       largest = T,
-                       left = F)
-
-florence.wind = wind.sf %>%
-  filter(hurricane == "florence")
-##this does something bad with zips to counties; puts 36804 in russel,al but it is lee,al
-florence.zcta = st_join(zcta, 
-                        florence.wind, 
-                        join = st_within,
-                        largest = T, 
-                        left = F) 
-
-irma.wind = wind.sf %>%
-  filter(hurricane == "irma") 
-irma.zcta = st_join(zcta, 
-                    irma.wind, 
-                    join = st_within, 
-                    largest = T,
-                    left = F)
-
-harvey.wind = wind.sf %>%
-  filter(hurricane == "harvey")
-harvey.zcta = st_join(zcta, 
-                      harvey.wind,
-                      join = st_within,
-                      largest = T,
-                      left = F)
-
-ike.wind = wind.sf %>%
-  filter(hurricane == "ike")
-ike.zcta = st_join(zcta,
-                   ike.wind,
-                   join = st_within, 
-                   largest = T,
-                   left = F)
-
-##stack zips by hurricane 
-wind.hurricane = rbind(michael.zcta, florence.zcta, irma.zcta, harvey.zcta, ike.zcta)
-
-wind.hurricane = inner_join(wind.hurricane, 
-                            zcta.atts, 
-                            by = c("zcta" = "zips"))
-
-
-st_write(wind.hurricane, "./OutputData/Windswath_ByHurricane_ZCTA.gpkg")
-data.table::fwrite(st_drop_geometry(wind.hurricane), "./OutputData/Windswath_ByHurricane_ZCTA.csv")
-
-#### Housing Data Set Up####
-rm(list = ls())
-
-##data 
-survey = data.table::fread("./OutputData/SurveyData_ZCTAttribs.csv", 
-                           stringsAsFactors = F,
-                           colClasses = c(zcta = "character"))
-
-##windswath data 
-wind = data.table::fread("./OutputData/Windswath_ByHurricane_ZCTA.csv", 
-                         stringsAsFactors = F,
-                         colClasses = c(zcta = "character")) %>%
-  mutate(index = row_number()) %>%
-  mutate(statefp = str_pad(statefp, 2, side = "left", pad = "0"),
-         countyfp = str_pad(countyfp, 3, side = "left", pad = "0"),
-         geoid = paste(statefp, countyfp, sep = ""))
-
-##housing data from 2013-2017 5 year ACS 
-house = data.table::fread("./InputData/ACS_17_5YR_DP04/ACS_17_5YR_DP04_with_ann.csv",
-                          colClasses = c(GEO.id2 = "character"))
-
-##selecting variables of interest from housing data raw 
-house.use = house %>%
-  select(c(2,4,5,8,9,12,13,184,185,188,189,232,233))
-house.use = house.use[-1,]
+##housing data from 2013-2017 5 year ACS (by zcta) 
+house = data.table::fread(here("InputData", "ACS_17_5YR_DP04", "ACS_17_5YR_DP04_with_ann.csv"),
+                          colClasses = c(GEO.id2 = "character")) %>%
+  select(c(2,4,5,8,9,12,13,184,185,188,189,232,233)) %>%
+  slice(-1) 
 names(house.use) = c("zcta", "tot.units", "err.tot.units", "occ.units", "err.occ.units",
                      "vac.units", "err.vac.units", "owner.units", "err.owner.units", 
                      "renter.units", "err.renter.units", "no.veh", "err.no.veh")
@@ -871,16 +1032,10 @@ names(house.use) = c("zcta", "tot.units", "err.tot.units", "occ.units", "err.occ
 ##zcta attributes from prior ZCTA_Controls script 
 zcta.atts = data.table::fread("./InputData/ZCTA_AvgData.csv", 
                               colClasses = c(zcta = "character", med.inc = "integer"))
-##zcta geospatial attributes 
+##ZCTA Geospatial Add
 zcta = st_read("./InputData/tl_2019_us_zcta510/tl_2019_us_zcta510.shp",
                stringsAsFactors = F) %>%
-  st_transform(102003)
-##county geospatial attributes 
-county = st_read("./InputData/tl_2019_us_county/tl_2019_us_county.shp",
-                 stringsAsFactors = F) %>%
-  st_transform(102003)
-
-##house estimates by county
+  st_transform('ESRI:102003')
 
 ##adding zcta spatial reference to house.use
 zcta.house = left_join(house.use, 
@@ -888,64 +1043,8 @@ zcta.house = left_join(house.use,
                          select(ZCTA5CE10, geometry), 
                        by = c("zcta" = "ZCTA5CE10")) %>%
   st_as_sf() %>%
-  st_transform(102003)
+  st_transform('ESRI:102003')
 
-##adding county specific info to zcta.house data frame for aggregation at county level 
-zcta.county = st_join(zcta.house,
-                      county %>%
-                        select(GEOID, geometry),
-                      join = st_within, 
-                      largest = T, 
-                      left = F)
-
-##coercing occ.units a number
-zcta.county$occ.units = as.numeric(zcta.county$occ.units)
-
-##aggregating total occupied units by county 
-county.house.total = data.table::setDT(zcta.county)[, county.occ := sum(occ.units), by = GEOID] %>%
-  select(zcta, GEOID, county.occ) %>%
-  group_by(GEOID) %>%
-  slice(1) 
-
-data.table::fwrite(county.house.total, "./OutputData/CountyHousingTotal.csv")  
-##population estimates by county 
-
-##adding spatial attributes to zcta 
-zcta.atts = left_join(zcta.atts, 
-                      zcta %>%
-                        select(ZCTA5CE10, geometry), 
-                      by = c("zcta" = "ZCTA5CE10")) %>%
-  st_as_sf() %>%
-  st_transform(102003)
-
-##adding county specific info to zcta.atts data frame for aggregation at county level 
-zcta.att.county = st_join(zcta.atts,
-                          county %>%
-                            select(GEOID, geometry),
-                          join = st_within, 
-                          largest = T, 
-                          left = F)
-
-
-##aggregating population by county from zcta measures 
-zcta.att.total = data.table::setDT(zcta.att.county)[, county.pop := sum(tot.pop), by = GEOID] %>%
-  select(zcta, GEOID, county.pop) %>%
-  group_by(GEOID) %>%
-  slice(1) 
-
-data.table::fwrite(zcta.att.total, "./OutputData/CountyPopTotal.csv")
-
-##house estimates survey 
-survey.house = left_join(survey, 
-                         house.use,
-                         by = "zcta")
-data.table::fwrite(survey.house, "./OutputData/SurveyHouse.csv")
-
-##house estimates wind 
-wind.house = left_join(wind, 
-                       house.use,
-                       by = "zcta")
-data.table::fwrite(wind.house, "./OutputData/WindswathHouse.csv")
 
 ####Sheldus Data Set Up####
 rm(list = ls())

@@ -9,7 +9,7 @@ library(here)
 library(sf) 
 library(maps)
 
-# Raw Survey Setup --------------------------------------------------------
+# (1) Raw Survey Setup --------------------------------------------------------
 
 # Michael
 #Load data
@@ -944,42 +944,46 @@ data <- rbind(data_florence,data_michael) %>% mutate(florence = ifelse(hurricane
 survey = data %>%
   mutate(index = row_number())
 
-
+##Rename Survey 
+survey1 = survey 
 
 # ZCTA Controls 2018 5YR --------------------------------------------------
+
+##New Data 
+  ##ACS 2018 5YR 
 ACS2018 = data.table::fread(here("InputData", "ACSDP5Y2018", "income_sex_byzip.csv"))
 
 ACS2018.df = ACS2018[-1,] %>%
   select(1, 3, 7, 11, 15, 19, 20) %>%
   rename(geoid = GEO_ID, 
-         tot.pop = DP05_0021E,
-         male.pop = DP05_0026E,
-         fem.pop = DP05_0027E,
-         med.inc = DP03_0062E,
-         mean.inc = DP03_0063E,
-         mean.inc.moe = DP03_0063M) %>%
+         tot.pop18 = DP05_0021E,
+         male.pop18 = DP05_0026E,
+         fem.pop18 = DP05_0027E,
+         med.inc18 = DP03_0062E,
+         mean.inc18 = DP03_0063E,
+         mean.inc.moe18 = DP03_0063M) %>%
   mutate(zcta = str_sub(geoid, 10, nchar(geoid)),
-         tot.pop = as.numeric(tot.pop),
-         male.pop = as.numeric(male.pop),
-         fem.pop = as.numeric(fem.pop), 
-         med.inc = as.numeric(med.inc),
-         mean.inc = as.numeric(mean.inc),
-         mean.inc.moe = as.numeric(mean.inc.moe)) 
+         tot.pop18 = as.numeric(tot.pop18),
+         male.pop18 = as.numeric(male.pop18),
+         fem.pop18 = as.numeric(fem.pop18), 
+         med.inc18 = as.numeric(med.inc18),
+         mean.inc18 = as.numeric(mean.inc18),
+         mean.inc.moe18 = as.numeric(mean.inc.moe18)) 
 
 
-# Spatial Set Up for Survey Data ------------------------------------------
+# (2) Spatial Set Up for Survey Data ------------------------------------------
 
 ##epsg:102003 is USA Contiguous Albers Equal Area Conic
 
-##Data Sets We Have:: 
+##Old Data: 
   ##survey - Survey Data 
-  ##ACS2018.df - ZCTA controls
+  ##ACS2018.df - ZCTA demographic attributes (no geom) 
 
 ##New Data
-##state fips codes 
+  ##state fips codes 
 data(state.fips)
 
-##ZCTA Tracks (2019) 
+  ##ZCTA Tracks (2019) 
 zcta = st_read(here("InputData", "tl_2019_us_zcta510", "tl_2019_us_zcta510.shp")) %>%
   select(zcta = ZCTA5CE10,
          geometry) %>%
@@ -987,13 +991,13 @@ zcta = st_read(here("InputData", "tl_2019_us_zcta510", "tl_2019_us_zcta510.shp")
 
 ##Convert Survey Zips to ZCTAs: Add ZCTA Geometries and ZCTA Socioeconomic Attributes 
 ##ID Zips not 1 to 1 ZCTA
-bad.zips = setdiff(survey$zip, zcta$zcta) 
+bad.zips = setdiff(survey1$zip, zcta$zcta) 
 ##serached on https://www.udsmapper.org/zcta-crosswalk.cfm
 rep.zcta = c(28409, 27330, 29501, 27705, 27408, 28504, 28540, 28112, 27546, 27705, 28401, 27403, 
              27707, 28387, 27403, 29577, 29526, 28411, 28374, 27252, 28540, 31701, 32305, 32304,
              39817, 32304, 32401, 32310, 31705, 32405, 31021, 32327, 31015, 32303, 31701)
 ##rename
-survey.zcta = survey %>%
+survey.zcta = survey1 %>%
   mutate(zcta = zip)
 ##For Bad ZIPS --> ZCTA, we replace with searched ZCTA
 survey.zcta$zcta = rep.zcta[match(survey.zcta$zcta, bad.zips)]
@@ -1014,308 +1018,217 @@ survey.atts = inner_join(survey.zcta.sf,
                          ACS2018.df, 
                          by = "zcta")
 
+##Survey Rename 
+survey2 = survey.atts 
 
-# ZCTA Housing Data ACS(2017) with Survey -------------------------------------------
+# Aggregate ZCTA Housing Data ACS(2017) and ZCTA Population Data ACS(2018) -------------------------------------------
 
-##Data Sets We Need:: 
-    ## survey.atts = Survey Raw + ZCTA Demo Attribures and Geom 
+##Old Data: 
+  ##zcta = ID and Geom for all ZCTA tracks 
+  ##ACS2018.df = ZCTA demographic attributes 
+  
 
-##housing data from 2013-2017 5 year ACS (by zcta) 
+##New Data:
+  ##Housing Data from 2013-2017 5 year ACS (ZCTA) 
 house = data.table::fread(here("InputData", "ACS_17_5YR_DP04", "ACS_17_5YR_DP04_with_ann.csv"),
                           colClasses = c(GEO.id2 = "character")) %>%
-  select(c(2,4,5,8,9,12,13,184,185,188,189,232,233)) %>%
-  slice(-1) 
-names(house.use) = c("zcta", "tot.units", "err.tot.units", "occ.units", "err.occ.units",
-                     "vac.units", "err.vac.units", "owner.units", "err.owner.units", 
-                     "renter.units", "err.renter.units", "no.veh", "err.no.veh")
+select(c(2,8)) %>%
+  slice(-1) %>%
+  rename(zcta = GEO.id2, 
+         occ.units = HC01_VC04) %>% 
+  mutate(occ.units = as.numeric(occ.units)) 
 
-##zcta attributes from prior ZCTA_Controls script 
-zcta.atts = data.table::fread("./InputData/ZCTA_AvgData.csv", 
-                              colClasses = c(zcta = "character", med.inc = "integer"))
-##ZCTA Geospatial Add
-zcta = st_read("./InputData/tl_2019_us_zcta510/tl_2019_us_zcta510.shp",
-               stringsAsFactors = F) %>%
+  ##US Counties
+county = st_read(here("InputData", "tl_2019_us_county", "tl_2019_us_county.shp")) %>%
   st_transform('ESRI:102003')
 
-##adding zcta spatial reference to house.use
-zcta.house = left_join(house.use, 
-                       zcta %>%
-                         select(ZCTA5CE10, geometry), 
-                       by = c("zcta" = "ZCTA5CE10")) %>%
+##Data Joining 
+
+##ZCTA Geometries for Housing Data 
+zcta.house = left_join(house, 
+                       zcta,
+                       by = "zcta") %>%
+  st_as_sf() %>%
+  st_transform('ESRI:102003')
+##Housing at ZCTA Level with Assigned Counties for each ZCTA 
+county.house = st_join(zcta.house,
+                      county %>%
+                        select(GEOID, geometry),
+                      join = st_within, 
+                      largest = T, 
+                      left = F)
+##Aggregate Housing by County (GEOID) 
+agg.county.house = data.table::setDT(county.house)[, county.occ := sum(occ.units), by = GEOID] %>%
+  select(zcta, GEOID, county.occ) %>%
+  group_by(GEOID) %>%
+  slice(1)  ##Only need row for each County (GEOID)
+
+
+##Write Out 
+# data.table::fwrite(county.house.total, here("OutputData", "CountyHousingTotal.csv"))
+
+
+survey.house = inner_join(survey2, 
+                          county.house %>%
+                            select(zcta, county.occ, GEOID),
+                          by = "zcta") %>% 
+  mutate(statefp = as.character(str_sub(GEOID, 1, 2)), 
+         countyfp = as.character(str_sub(GEOID, 3, 5)))
+
+##Population Estimates 
+##adding spatial attributes to zcta populations 
+zcta.atts.geo = left_join(ACS2018.df, 
+                      zcta, 
+                      by = "zcta") %>%
   st_as_sf() %>%
   st_transform('ESRI:102003')
 
+##Population at ZCTA Level with Assigned Counties for each ZCTA 
+county.pop = st_join(zcta.atts.geo,
+                          county %>%
+                            select(GEOID, geometry),
+                          join = st_within, 
+                          largest = T, 
+                          left = F)
 
-####Sheldus Data Set Up####
-rm(list = ls())
-##data 
-sheldus.a = data.table::fread("./InputData/sheldus_2018/UID3882f_AGG_A.csv") %>%
-  mutate(`County FIPS` = str_sub(`County FIPS`, 2, 6))
-sheldus.b = data.table::fread("./InputData/sheldus_2018/UID3882f_AGG_B.csv") %>%
-  mutate(`County FIPS` = str_sub(`County FIPS`, 2, 6))
+##Aggregate Population by County 
+agg.county.pop = data.table::setDT(county.pop)[, county.pop := sum(tot.pop), by = GEOID] %>%
+  select(zcta, GEOID, county.pop) %>%
+  group_by(GEOID) %>%
+  slice(1) 
 
+names(survey.pop)
+survey.pop = inner_join(survey.house, 
+                        county.pop %>%
+                          select(zcta, tot.pop, GEOID), 
+                        by = "zcta") 
+  
 
-
-survey = data.table::fread("./OutputData/SurveyData_ZCTAttribs.csv",
-                           colClasses = c(zcta = "character", countyfp = "character", statefp = "character"),
-                           stringsAsFactors = F) %>%
-  mutate(fips = paste(statefp, countyfp, sep = ""))
-
-wind = data.table::fread("./OutputData/Windswath_ByHurricane_ZCTA.csv",
-                         stringsAsFactors = F,
-                         colClasses = c(statefp = "character", countyfp = "character")) %>%
-  mutate(fips = paste(statefp, countyfp, sep = ""),
-         index = row_number())
-
-
-## sheldus data 
-michael.sheldus = sheldus.a %>%
-  filter(Year == 2018 & Month == 10 & Hazard == "Hurricane/Tropical Storm")
-florence.sheldus = sheldus.a %>%
-  filter(Year == 2018 & Month == 9 & Hazard == "Hurricane/Tropical Storm")
-ike.sheldus = sheldus.a %>%
-  filter(Year == 2008 & Month == 9 & Hazard == "Hurricane/Tropical Storm")
-ike.sheldusb = sheldus.b %>%
-  filter(Year == 2008 & Month == 10 & Hazard == "Hurricane/Tropical Storm")
-harvey.sheldus = sheldus.a %>%
-  filter(Year == 2017 & Month == 8 & Hazard == "Hurricane/Tropical Storm")
-ir.har.sheldus.sep = sheldus.a %>%
-  filter(Year == 2017 & Month == 9 & Hazard == "Hurricane/Tropical Storm")
-
-##add sheldus to survey 
-survey.michael = left_join(survey %>%
-                             filter(hurricane == "michael"),
-                           michael.sheldus, 
-                           by = c("fips" = "County FIPS"))
-
-survey.florence = left_join(survey %>%
-                              filter(hurricane == "florence"),
-                            florence.sheldus,
-                            by = c("fips" = "County FIPS"))
-survey.sheldus = rbind(survey.michael, survey.florence)
-data.table::fwrite(survey.sheldus, "./OutputData/SurveySheldus.csv")
+##Write Out
+# data.table::fwrite(zcta.att.total, here("OutputData", "CountyPopTotal.csv"))
 
 
-##add sheldus to windswaths 
-wind.michael = left_join(wind %>%
-                           filter(hurricane == "michael"),
-                         michael.sheldus,
-                         by = c("fips" = "County FIPS"))
-wind.florence = left_join(wind %>%
-                            filter(hurricane == "florence"),
-                          florence.sheldus, 
-                          by = c("fips" = "County FIPS"))
-wind.ike = left_join(wind %>%
-                       filter(hurricane == "ike"),
-                     ike.sheldus,
-                     by = c("fips" = "County FIPS"))
-# wind.ike2 = left_join(wind %>%
-#                         filter(hurricane == "ike"),
-#                      ike.sheldusb,
-#                      by = c("fips" = "County FIPS"))
-wind.harvey = inner_join(wind %>%
-                           filter(hurricane == "harvey"),
-                         harvey.sheldus,
-                         by = c("fips" = "County FIPS"))
+##Rename Survey 
+survey3 = survey.pop %>%
+  select(-c(GEOID.y)) %>%
+  rename(GEOID = GEOID.x) 
 
-wind.harvirv = left_join(wind %>%
-                           filter(hurricane == "harvey" | hurricane == "irma"),
-                         ir.har.sheldus.sep,
-                         by = c("fips" = "County FIPS")) %>%
-  filter(!index %in% unique(wind.harvey$index))
+# (3) ZCTA Distance to Shoreline and Hurricane Track --------------------------
 
+##Old Data:
+  ##zcta - ZCTA IDs and Geoms 
+  ##survey3 = Raw Survey + ACS2018 Demographics
 
-
-wind.out = rbind(wind.florence, wind.harvey, wind.harvirv, wind.ike, wind.michael) %>%
-  select(-c(`State Name`, `County Name`))
-
-data.table::fwrite(wind.out, "./OutputData/WindSwath_Sheldus.csv")
-
-####Distance to Shore and Hurricane Track####
-##data 
-
-##zcta tracks from 2019 zcta definitions --> zcta with geometries 
-zcta = st_read("./InputData/tl_2019_us_zcta510/tl_2019_us_zcta510.shp", 
-               stringsAsFactors = F) %>%
-  select(zcta = ZCTA5CE10,
-         geometry) %>%
-  st_transform(102003)
-
-##states polygons
-states = st_read("./InputData/tl_2019_us_state/tl_2019_us_state.shp") %>%
+##New Data:
+  ##State Polygons 
+states = st_read(here("InputData", "tl_2019_us_state", "tl_2019_us_state.shp")) %>%
   mutate(NAME = str_to_lower(NAME)) %>%
-  st_transform(102003)
+  st_transform('ESRI:102003')
 
-##survey 
-survey = data.table::fread("./OutputData/SurveyHouse.csv",
-                           colClasses = c(statefp = "character", countyfp = "character", zcta = "character")) %>%
-  mutate(statefp = str_pad(statefp, 2, side = "left", pad = "0"),
-         countyfp = str_pad(countyfp, 3, side = "left", pad = "0"),
-         geoid = paste(statefp, countyfp, sep = ""))
+  ##Shoreline Line Feature (converted from polygon in ArcPro)  
+shoreline = st_read(here("InputData", "us_coastline_linefeat", "nam_coast_lines.shp")) %>%
+  st_transform('ESRI:102003')
 
-##shoreline line feature (turned from polygon feature to lines in arcgis) 
-shoreline = st_read("./InputData/us_coastline_linefeat/nam_coast_lines.shp") %>%
-  st_transform(102003)
+  ##Florence Hurricane Track Line Feature 
+flo.track = st_read(here("InputData", "Florence_TRACK", "AL062018_lin.shp")) %>%
+  st_transform('ESRI:102003')
+  ##Michael Hurricane Track Line Feature 
+mich.track = st_read(here("InputData", "Michael_TRACK", "AL142018_lin.shp")) %>%
+  st_transform('ESRI:102003')
 
-##hurricane tracks (as line segments) 
-flo_track = st_read("./InputData/Florence_Hurricane/AL062018_lin.shp") %>%
-  st_transform(102003)
-mich_track = st_read("./InputData/Michael_TRACK/AL142018_lin.shp") %>%
-  st_transform(102003)
+##Survey ZCTAs with Geoms 
+zcta.dist = zcta %>%
+  filter(zcta %in% survey3$zcta)
 
-##pulling ZCTAs from survey to find distance 
-zcta_dist = zcta %>%
-  filter(zcta %in% survey$zcta)
+##Centroid of ZCTA Polygon 
+zcta.centroid = st_centroid(zcta.dist)
 
-##creating centroid point for each ZCTA 
-zcta_cent = st_centroid(zcta_dist)
+##ZCTA Centroid to Nearest Shoreline (meters) 
+zcta.shore.dist = apply(st_distance(zcta.centroid, shoreline), 1, min)
 
-##calculating distance to shoreline 
-zcta.shore.dist = apply(st_distance(zcta_cent, shoreline), 1, min)
-
-##attaching distance calculations to ZCTAs
-zcta.shore = cbind(zcta_dist, zcta.shore.dist) %>%
+##Data Frame of ZCTA and Distance from Centroid 
+zcta.shore = cbind(zcta.dist, zcta.shore.dist) %>%
   data.frame() %>%
   rename(dist.shore = zcta.shore.dist)
 
-
-##pulling ZCTAs from survey for Florence 
-surv_flo = survey %>%
+##Survey Florence 
+surv.flo = survey3 %>%
   filter(hurricane == "florence")
-zcta_flo = zcta %>%
-  filter(zcta %in% surv_flo$zcta)
-zcta_flo_cent = st_centroid(zcta_flo) 
 
-##calculating distance to florence track 
-zcta.flo.dist = apply(st_distance(zcta_flo_cent, flo_track), 1, min) 
+##Florence ZCTAs 
+zcta.flo = zcta %>%
+  filter(zcta %in% surv.flo$zcta)
 
-##attach distance to zcta from Florence 
-zcta.florence = cbind(zcta_flo, zcta.flo.dist) %>%
+##Florence ZCTAs Centroid 
+zcta.flo.cent = st_centroid(zcta.flo) 
+
+##Florence ZCTA nearest distance (meters) Florence Track 
+zcta.flo.dist = apply(st_distance(zcta.flo.cent, flo.track), 1, min) 
+
+##Data Frame of ZCTA and Distance to Florence Track 
+zcta.florence.track = cbind(zcta.flo %>%
+                              st_drop_geometry(),
+                            zcta.flo.dist) %>%
   data.frame()
 
-##add distance from Florence ZCTA to Florence Survey 
-survey.florence = inner_join(surv_flo, 
-                             zcta.florence, 
+##ZCTA Centroid Nearest Distance to Florence Track (meters) Data Frame 
+survey.florence = inner_join(surv.flo, 
+                             zcta.florence.track, 
                              by = "zcta") %>%
   rename(dist.hurr = zcta.flo.dist) 
 
-##pulling ZCTAs from suvey for Michael 
-surv_mich = survey %>%
+##Survey Michael 
+surv.mich = survey3 %>%
   filter(hurricane == "michael") 
-zcta_mich = zcta %>%
-  filter(zcta %in% surv_mich$zcta)
-zcta_mich_cent = st_centroid(zcta_mich)
 
-##calculating distance to michael track 
-zcta.mich.dist = apply(st_distance(zcta_mich_cent, mich_track), 1, min)
+##Michael ZCTAs 
+zcta.mich = zcta %>%
+  filter(zcta %in% surv.mich$zcta)
 
-##attach distance to zcta from Michael 
-zcta.michael = cbind(zcta_mich, zcta.mich.dist) %>%
+##Michael ZCTA Centroids 
+zcta.mich.cent = st_centroid(zcta.mich)
+
+##Michael ZCTA nearest distance (meters) Michael Track 
+zcta.mich.dist = apply(st_distance(zcta.mich.cent, mich.track), 1, min)
+
+##Data Frame of ZCTA and Distance to Michael Track 
+zcta.michael = cbind(zcta.mich %>% 
+                       st_drop_geometry(),
+                     zcta.mich.dist) %>%
   data.frame()
 
 ##add distance from Michael ZCTA to Michael Survey 
-survey.michael = inner_join(surv_mich, 
+survey.michael = inner_join(surv.mich, 
                             zcta.michael, 
                             by = "zcta") %>%
   rename(dist.hurr = zcta.mich.dist) 
 
-##stack survey michael and survey florence 
+##Stack Florence and Michael Survey 
 survey.stack = rbind(survey.florence, survey.michael)
 
 
 ##attaching distance calculations to survey based on ZCTA
-survey.out = inner_join(survey.stack, 
+survey.distance = inner_join(survey.stack, 
                         zcta.shore %>%
-                          select(zcta, zcta.shore.dist), 
-                        by =  "zcta") %>%
-  select(-geometry)
+                          select(zcta, dist.shore), 
+                        by =  "zcta")
+##Write Out 
+# data.table::fwrite(survey.distance %>%
+#                      st_drop_geometry(),
+#                    here("OutputData", "SurveyDistances.csv")) 
 
-data.table::fwrite(survey.out, "./OutputData/SurveyDistances.csv")
+##Rename Survey 
+survey4 = survey.distance
 
-####Joining all Data Sets####
-##data 
-wind.house = data.table::fread("./OutputData/WindswathHouse.csv", 
-                               colClasses = c(zcta = "character")) %>%
-  mutate(statefp = str_pad(statefp, 2, side = "left", pad = "0"),
-         countyfp = str_pad(countyfp, 3, side = "left", pad = "0"),
-         geoid = paste(statefp, countyfp, sep = ""))
+# Adding Data for RR 1 ----------------------------------------------------
+
+##Old Data: 
+  ##survey4 = Raw Survey + ACS2018 Demographics + ZCTA (Geoms) + StateFP + CountyFP
+  ##          Total County Occupied Housing + Total County Population + 
+  ##          Distance to Shore + Distance to Hurricane Track 
 
 
-wind.sheldus = data.table::fread("./OutputData/WindSwath_Sheldus.csv",
-                                 colClasses = c(zcta = "character")) %>%
-  select(c("index", "Hazard", "Year", "Month", "CropDmg", CropDmg18 = "CropDmg(ADJ 2018)",
-           CropDmgPerCap18 = "CropDmgPerCapita(ADJ 2018)",
-           "PropertyDmg", PropDmg18 = "PropertyDmg(ADJ 2018)", 
-           PropDmgPerCap18 = "PropertyDmgPerCapita(ADJ 2018)")) 
 
-survey.house = data.table::fread("./OutputData/SurveyDistances.csv",
-                                 colClasses = c(zcta = "character")) 
-survey.sheldus = data.table::fread("./OutputData/SurveySheldus.csv",
-                                   colClasses = c(zcta = "character")) %>% 
-  select(c("index", "Hazard", "Year", "Month", "CropDmg", CropDmg18 = "CropDmg(ADJ 2018)",
-           CropDmgPerCap18 = "CropDmgPerCapita(ADJ 2018)",
-           "PropertyDmg", PropDmg18 = "PropertyDmg(ADJ 2018)", 
-           PropDmgPerCap18 = "PropertyDmgPerCapita(ADJ 2018)")) 
-
-##join survey 
-survey.master = inner_join(survey.house, 
-                           survey.sheldus, 
-                           by = "index") 
-
-survey.out = survey.master %>%
-  select(-c(tot.units, err.tot.units, err.occ.units, vac.units, err.vac.units, owner.units, err.owner.units,
-            renter.units, err.renter.units, no.veh, err.no.veh)) %>%
-  mutate(CropDmg = ifelse(is.na(CropDmg), 0, CropDmg),
-         CropDmg18 = ifelse(is.na(CropDmg18), 0, CropDmg18),
-         CropDmgPerCap18 = ifelse(is.na(CropDmgPerCap18), 0 , CropDmgPerCap18),
-         PropertyDmg = ifelse(is.na(PropertyDmg), 0, PropertyDmg),
-         PropDmg18 = ifelse(is.na(PropDmg18), 0, PropDmg18),
-         PropDmgPerCap18 = ifelse(is.na(PropDmgPerCap18), 0, PropDmgPerCap18)) %>%
-  mutate(Hazard = ifelse(Hazard == "", "Hurricane/Tropical Storm", Hazard),
-         Year = 2018,
-         Month = ifelse(hurricane == "michael", 10, 9))
-
-##join windswath
-wind.master = inner_join(wind.house, 
-                         wind.sheldus, 
-                         by = "index")
-
-wind.out = wind.master %>%
-  # filter(bt_speed_max > 30) %>%
-  select(-c(tot.units, err.tot.units, err.occ.units, vac.units, err.vac.units, owner.units, err.owner.units,
-            renter.units, err.renter.units, no.veh, err.no.veh)) %>%
-  mutate(CropDmg = ifelse(is.na(CropDmg), 0, CropDmg),
-         CropDmg18 = ifelse(is.na(CropDmg18), 0, CropDmg18),
-         CropDmgPerCap18 = ifelse(is.na(CropDmgPerCap18), 0 , CropDmgPerCap18),
-         PropertyDmg = ifelse(is.na(PropertyDmg), 0, PropertyDmg),
-         PropDmg18 = ifelse(is.na(PropDmg18), 0, PropDmg18),
-         PropDmgPerCap18 = ifelse(is.na(PropDmgPerCap18), 0, PropDmgPerCap18)) %>%
-  mutate(Hazard = ifelse(Hazard == "", "Hurricane/Tropical Storm", Hazard)) 
-
-wind.out.michael = wind.out %>%
-  filter(hurricane == "michael") %>%
-  mutate(Year = 2018,
-         Month = 10)
-wind.out.florence = wind.out %>%
-  filter(hurricane == "florence") %>%
-  mutate(Year = 2018,
-         Month = 9)
-wind.out.irma = wind.out %>%
-  filter(hurricane == "irma") %>%
-  mutate(Year = 2017, 
-         Month = 9)
-wind.out.harvey = wind.out %>%
-  filter(hurricane == "harvey") %>%
-  mutate(Year = 2017,
-         Month = 8)
-wind.out.ike = wind.out %>%
-  filter(hurricane == "ike") %>%
-  mutate(Year = 2008, 
-         Month = 9)
-
-wind.write = rbind(wind.out.florence, wind.out.harvey, wind.out.ike, wind.out.irma, wind.out.michael)
-
-data.table::fwrite(wind.write, "./OutputData/WindSwathMaster.csv")
 
 ##joining census averages
 wind = wind.write %>%

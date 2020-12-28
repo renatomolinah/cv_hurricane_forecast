@@ -983,11 +983,83 @@ ACS2018.df = ACS2018[-1,] %>%
   ##state fips codes 
 data(state.fips)
 
+##Data Set of Counties Experiencing Hurricane Wind Speeds 
+wind.swaths = data.table::fread(here("InputData", "Windswath_Original.csv")) %>%
+  mutate(index = row_number())
+
+county = sf::st_read(here("InputData", "tl_2019_us_county", "tl_2019_us_county.shp"), 
+                       stringsAsFactors = FALSE) %>%
+  mutate(STATEFP = as.numeric(STATEFP)) %>%
+  st_transform('ESRI:102003') %>%
+  select(statefp = STATEFP,
+         countyfp = COUNTYFP, 
+         name = NAMELSAD, 
+         geometry) %>%
+  mutate(county.name = str_to_lower(name, locale = "en")) %>%
+  select(-name)
+
   ##ZCTA Tracks (2019) 
 zcta = st_read(here("InputData", "tl_2019_us_zcta510", "tl_2019_us_zcta510.shp")) %>%
   select(zcta = ZCTA5CE10,
          geometry) %>%
   st_transform('ESRI:102003')
+
+##County Name Set Up 
+## Joining WindSwath to StateFIPS for FIPS ID and State Abb
+wind.swaths.st.fips = left_join(wind.swaths, 
+                                state.fips %>%
+                                  select(fips, abb, polyname), 
+                                by = c("state" = "polyname")) %>%
+  mutate(abb = replace(abb, which(state == "virginia"), "VA"),
+         fips = replace(fips, which(state == "virginia"), 51),
+         abb = replace(abb, which(state == "massachusetts"), "MA"),
+         fips = replace(fips, which(state == "massachusetts"), 25),
+         abb = replace(abb, which(state == "north carolina"), "NC"),
+         fips = replace(fips, which(state == "north carolina"), 37),
+         abb = replace(abb, which(state == "new york"), "NY"),
+         fips = replace(fips, which(state == "new york"), 36)) %>%
+  mutate(unique.name = paste(state, county, sep = " "))
+
+##Adding State Names to Counties Data Set 
+counties.state = inner_join(counties, 
+                            wind.swaths.st.fips %>%
+                              select(state, fips) %>%
+                              distinct(fips, .keep_all = T),
+                            by = c("statefp" = "fips")) %>%
+  select(statefp, state, countyfp, county.name, geometry)
+
+##Removing "county" and "parish" in county.name (for joining with windswath) 
+RemoveWords = function(str, badword){
+  x = unlist(strsplit(str, " "))
+  paste(x[!x %in% badword], collapse = " ")
+}
+
+counties.remv.county = apply(data.frame(counties.state$county.name), 1, RemoveWords, badword = "county")
+counties.remv.parish = sapply(counties.remv.county, RemoveWords, badword = "parish")
+counties.clean.name = cbind(counties.state, counties.remv.parish) %>%
+  select(statefp, state, countyfp, county = counties.remv.parish, geometry) %>%
+  mutate(statefp = as.character(statefp),
+         county = as.character(county))
+
+##Fix the County Names that don't match with WindSwath Data Set (for joining) 
+counties.for.join = counties.clean.name %>%
+  mutate(county = replace(county, which(state == "missouri" & county == "ste. genevieve"), "ste genevieve"),
+         county = replace(county, which(state == "maryland" & county == "st. mary's"), "st. marys"), 
+         county = replace(county, which(state == "maryland" & county == "queen anne's"), "queen annes"),
+         county = replace(county, which(state == "maryland" & county == "prince george's"), "prince georges"),
+         county = replace(county, which(state == "virginia" & county == "newport news city"), "newport news"), 
+         county = replace(county, which((state == "tennessee" | state == "alabama" | state == "georgia") &
+                                          county == "dekalb"), "de kalb"),
+         county = replace(county, which(state == "virginia" & county == "virginia beach city"), "virginia beach"),
+         county = replace(county, which(state == "florida" & county == "desoto"), "de soto"),
+         county = replace(county, which(state == "mississippi" & county == "desoto"), "de soto"),
+         county = replace(county, which(state == "virginia" & county == "suffolk city"), "suffolk"),
+         county = replace(county, which(state == "virginia" & county == "norfolk city"), "norfolk"),
+         county = replace(county, which(state == "virginia" & county == "hampton city"), "hampton"),
+         county = replace(county, which(state == "district of columbia" & county == "district of columbia"), "washington"),
+         county = replace(county, which(state == "texas" & county == "dewitt"), "de witt"),
+         county = replace(county, which(state == "louisiana" & county == "lasalle"), "la salle")) %>%
+  mutate(unique.name = paste(state, county, sep = " "))
 
 ##Convert Survey Zips to ZCTAs: Add ZCTA Geometries and ZCTA Socioeconomic Attributes 
 ##ID Zips not 1 to 1 ZCTA
@@ -1018,13 +1090,21 @@ survey.atts = inner_join(survey.zcta.sf,
                          ACS2018.df, 
                          by = "zcta")
 
-##Survey Rename 
-survey2 = survey.atts 
+##State, County and Unique Names(keeps ZCTA geometries) 
+survey.full = st_join(survey.atts, 
+                      counties.for.join, 
+                      left = F, ##drop ZCTAs not within any counties 
+                      join = st_within, ##join by ZCTAs within counties 
+                      largest = T)
 
-# Aggregate ZCTA Housing Data ACS(2017) and ZCTA Population Data ACS(2018) -------------------------------------------
+##Survey Rename 
+survey2 = survey.full 
+
+# (3) Aggregate ZCTA Housing Data ACS(2017) and ZCTA Population Data ACS(2018) -------------------------------------------
 
 ##Old Data: 
   ##zcta = ID and Geom for all ZCTA tracks 
+  ##county = US County Names and Geoms 
   ##ACS2018.df = ZCTA demographic attributes 
   
 
@@ -1038,11 +1118,6 @@ select(c(2,8)) %>%
          occ.units = HC01_VC04) %>% 
   mutate(occ.units = as.numeric(occ.units)) 
 
-  ##US Counties
-county = st_read(here("InputData", "tl_2019_us_county", "tl_2019_us_county.shp")) %>%
-  st_transform('ESRI:102003')
-
-##Data Joining 
 
 ##ZCTA Geometries for Housing Data 
 zcta.house = left_join(house, 
@@ -1113,7 +1188,7 @@ survey3 = survey.pop %>%
   select(-c(GEOID.y)) %>%
   rename(GEOID = GEOID.x) 
 
-# (3) ZCTA Distance to Shoreline and Hurricane Track --------------------------
+# (4) ZCTA Distance to Shoreline and Hurricane Track --------------------------
 
 ##Old Data:
   ##zcta - ZCTA IDs and Geoms 
@@ -1220,20 +1295,39 @@ survey.distance = inner_join(survey.stack,
 ##Rename Survey 
 survey4 = survey.distance
 
-# Adding Data for RR 1 ----------------------------------------------------
+# (5) Impacted State Average Demographic Calculations  ----------------------------------------------------
 
 ##Old Data: 
-  ##survey4 = Raw Survey + ACS2018 Demographics + ZCTA (Geoms) + StateFP + CountyFP
-  ##          Total County Occupied Housing + Total County Population + 
-  ##          Distance to Shore + Distance to Hurricane Track 
+  ## survey4 = Raw Survey + ACS2018 Demographics + ZCTA (Geoms) + StateFP + CountyFP
+  ##          Total County Occupied Housing + Total County Population +
+  ##          Distance to Shore + Distance to Hurricane Track
+  ##ACS2018.df = ACS 5YR 2018 demographic data 
 
 
 
+##New Data: 
 
-##joining census averages
-wind = wind.write %>%
+##Data Set of States Experiencing Hurricane Winds in US 2003-2016
+windswath = data.table::fread(here("InputData", "WindSwathMaster.csv"), 
+                              colClasses = c(statefp = "character", countyfp = "character")) %>%
+  mutate(statefp = str_pad(statefp, 2, side = "left", pad = "0"),
+         countyfp = str_pad(countyfp, 3, side = "left", pad = "0"),
+         geoid = paste(statefp, countyfp, sep = ""),
+         ownrfrac = owner.units/tot.units,
+         femfrac = fem.pop/tot.pop)
+
+##Data Set of All Areas Impacted by Hurricane Force Winds >=30 mph 2003-2016
+wind30 = windswath %>%
   filter(bt_speed_max >= 30)
-us.data = data = readxl::read_excel("./InputData/representation_table.xlsx", skip = 2,
+
+##Creating ACS2018 5YR Data Set for Income by ZCTA for Impaced ZCTAs by Hurricane Winds >= 30 mph 
+ACS2018.impacted = ACS2018.df %>%
+  select(zcta, mean.inc18) %>%
+  filter(zcta %in% wind30$zcta)
+
+##ACS 1YR 2018 Data for each State Identified as Impacted by >=30 mph Hurricane Winds 2003-2016
+us.data = data = readxl::read_excel(here("InputData", "ACSSPP1Y2018", 
+                                         "representation_table.xlsx"), skip = 2,
                                     col_names = c("state", "tot.pop",
                                                   "pop18_24", "var_pop18_24", "pop25_34", "var_pop25_34", "pop35_44", "var_pop35_44",
                                                   "pop45_54", "var_pop45_54", "pop55_64", "var_pop55_64", "pop65_74", "var_pop65_74",
@@ -1242,22 +1336,137 @@ us.data = data = readxl::read_excel("./InputData/representation_table.xlsx", ski
                                                   "ownr_occ_per", "var_ownr_occ_per", 
                                                   "rntr_occ_per", "var_rntr_occ_per", "median.age")) %>%
   mutate(state = str_to_lower(state)) %>%
-  filter(state %in% wind$state) %>%
-  select(male18up, female18up, avg_housesize, ownr_occ_per, rntr_occ_per, median.age)
-zcta_atts = data.table::fread("./InputData/ZCTA_AvgData.csv", 
-                              colClasses = c(zcta = "character")) %>%
-  select(zcta, mean.inc) %>%
-  filter(zcta %in% wind$zcta)
+  filter(state %in% wind30$state) %>% ##States Experience >=30 MPH Winds 
+  select(state, male18up, female18up, avg_housesize, ownr_occ_per, rntr_occ_per, median.age)
 
-survey.out = survey %>%
+##Including US Averages (based on impacted states) for Relevant Covariates 
+survey5 = survey4 %>%
   mutate(US_males = mean(us.data$male18up, na.rm = T), 
          US_hh = mean(us.data$avg_housesize, na.rm = T),
          US_ownr = mean(us.data$ownr_occ_per, na.rm = T), 
          US_med.age = mean(us.data$median.age, na.rm = T),
-         US_inc = mean(zcta_atts$mean.inc, na.rm = T)) 
+         US_inc18 = mean(ACS2018.impacted$mean.inc18, na.rm = T)) 
 
 
+# (6) Adding 2008 Income Averages  ----------------------------------------
 
-data.table::fwrite(survey.out, "./OutputData/SurveyMaster.csv")  
 
+##Old Data: 
+## survey5 = Raw Survey + ACS2018 Demographics + ZCTA (Geoms) + StateFP + CountyFP
+##          Total County Occupied Housing + Total County Population +
+##          Distance to Shore + Distance to Hurricane Track + US Impacted State Demo Avgs 
+
+
+##New Data: 
+##ACS 5YR 2011 (2007-2011) Income Statistics by ZCTA 
+inc2011 = data.table::fread(here("InputData", "ACSDP5Y2011", "ACS2011-Inc.csv")) %>%
+  select(geoid = GEO_ID, 
+         med.inc = DP03_0062E, 
+         mean.inc = DP03_0063E) %>%
+  mutate(med.inc = as.numeric(med.inc),
+         mean.inc = as.numeric(mean.inc),
+         ##converting to 2018 Dollars for Comparison with 2018 Incomes 
+         med.inc11 = med.inc*1.13, ##https://data.bls.gov/cgi-bin/cpicalc.pl convert 
+         mean.inc11 = mean.inc*1.13, 
+         zcta = str_sub(geoid, 10, nchar(geoid)))  ##from Jan 2011 to Jan 2018
+
+##Add Income ACS 5YR 2011 Data to Survey 
+survey6 = left_join(survey5, 
+                       inc2011 %>% 
+                         select(zcta, mean.inc11, med.inc11), 
+                       by = "zcta")
+
+# (7) Hurricane Forecast Errors  ------------------------------------------
+
+##Old Datat:
+  ##survey6 = Raw Survey + ACS2018 Demographics + ZCTA (Geoms) + StateFP + CountyFP
+##          Total County Occupied Housing + Total County Population +
+##          Distance to Shore + Distance to Hurricane Track + US Impacted State Demo Avgs +
+##          ZCTA 2011 Incomes  
+
+##New Data:
+  ##Hurricane Forecast Errors 
+fore.err = data.table::fread(here("InputData", "ALL_swath_wind_differences_in_time.csv")) %>%
+  mutate(unique.name = paste(state, county, sep = " "))
+
+##Join Forecast Error for Michael and Florence (Survey Hurricanes) 
+survey7 = left_join(survey6, 
+                       fore.err %>%
+                         select(unique.name, hurricane, dif_max, dif_mean, dif_min, dif_median, dif_sd, 
+                                lag), 
+                       by = c("unique.name" = "unique.name", "hurricane" = "hurricane")) %>%
+  filter(lag == -3) ##72 Hour Forecast Error 
+
+
+# (8) Averages Demographic Statistics by Maxiumum Experienced Wind --------
+
+##Old Data: 
+##          survey8 : Raw Survey + ACS2018 Demographics + ZCTA (Geoms) + StateFP + State + 
+##          CountyFP + County + Total County Occupied Housing + Total County Population +
+##          Distance to Shore + Distance to Hurricane Track + US Impacted State Demo Avgs +
+##          ZCTA 2011 Incomes  + 72 Hr Forecast Error 
+
+
+##Setting Up Maximum Speed Groups for Impacted Area Cutoffs 
+speed = c(20, 30, 40, 50) 
+
+##Empty Data Frame for Loop
+new.avg = data.frame()
+##Loop Average Demographic based on Maximum Windspeed Experienced 
+for(i in 1:length(speed)){
+  avg = windswath %>%
+    filter(bt_speed_max <= speed[i]) %>%
+    group_by(geoid) %>%
+    slice(which.max(bt_speed_max)) %>%
+    ungroup() %>%
+    summarize(avg.fem = mean(femfrac, na.rm = T), 
+              avg.meaninc = mean(mean.inc, na.rm = T), 
+              avg.medinc = mean(med.inc, na.rm = T), 
+              avg.owner = mean(ownrfrac, na.rm = T))
+  new.avg = rbind(new.avg, avg)
+}
+
+##Average Demographic Calculations Table 
+attch.avg = cbind(speed, new.avg)
+
+
+survey8 = survey7 %>%
+  mutate(fem_20 = attch.avg[attch.avg$speed == 20, ]$avg.fem, 
+         fem_30 = attch.avg[attch.avg$speed == 30, ]$avg.fem, 
+         fem_40 = attch.avg[attch.avg$speed == 40, ]$avg.fem,
+         fem_50 = attch.avg[attch.avg$speed == 50, ]$avg.fem, 
+         meaninc_20 = attch.avg[attch.avg$speed == 20, ]$avg.meaninc,
+         meaninc_30 = attch.avg[attch.avg$speed == 30, ]$avg.meaninc,
+         meaninc_40 = attch.avg[attch.avg$speed == 40, ]$avg.meaninc,
+         meaninc_50 = attch.avg[attch.avg$speed == 50, ]$avg.meaninc,
+         ownr_20 = attch.avg[attch.avg$speed == 20, ]$avg.owner,
+         ownr_30 = attch.avg[attch.avg$speed == 30, ]$avg.owner,
+         ownr_40 = attch.avg[attch.avg$speed == 40, ]$avg.owner, 
+         ownr_50 = attch.avg[attch.avg$speed == 50, ]$avg.owner) 
+
+
+##Write Out Data Set 
+survey.out = survey8 %>%
+  select(##Response Variables, 
+        time.seconds = Duration..in.seconds., track_order, wind_order, rain_order, 
+        track_order, wind_order, rain_order, track_rate, wind_rate, rain_rate, track_bid1, 
+        wind_bid1, rain_bid1, track_answer1, wind_answer1, rain_answer1, track_bid2, 
+        wind_bid2, rain_bid2, track_answer2, wind_answer2, rain_answer2, 
+        ##General Location 
+        statefp, state, countyfp, county, unique.name, 
+        ##Control Set 1
+         hurricane, zcta, mean.inc18, female, experience, evacuate, voice, action, long_risk,
+        ##Control Set 2
+         age, owner, tenure, short_risk, hurricane_awareness, fema_awareness, nfip_awareness,
+         damage, hh_size, dist.shore, 
+        ##Exposure Specific Demo Averages
+        fem_20, fem_30, fem_40, fem_50, meaninc_20, meaninc_30, meaninc_40, meaninc_50, 
+        ownr_20, ownr_30, ownr_40, ownr50, 
+        ##RR New Covariates 
+        tax, personal, worth, costly, trust, 
+        mean.inc11, ##pre HFIP funding (2008) 
+        US_inc18, ##exposed population
+        dif_mean, lag ##mean forecast error 
+        )
+data.table::fwrite(survey8, here("OutputData", "Survey_Master.csv"))
 

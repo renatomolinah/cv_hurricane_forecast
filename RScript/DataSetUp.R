@@ -941,11 +941,9 @@ data_florence <- florence %>% select(Duration..in.seconds.,
 # Stack the two datasets
 
 data <- rbind(data_florence,data_michael) %>% mutate(florence = ifelse(hurricane == "florence",1,0))
-survey = data %>%
+survey1 = data %>%
   mutate(index = row_number())
 
-##Rename Survey 
-survey1 = survey 
 
 # ZCTA Controls 2018 5YR --------------------------------------------------
 
@@ -954,21 +952,19 @@ survey1 = survey
 ACS2018 = data.table::fread(here("InputData", "ACSDP5Y2018", "income_sex_byzip.csv"))
 
 ACS2018.df = ACS2018[-1,] %>%
-  select(1, 3, 7, 11, 15, 19, 20) %>%
+  select(1, 3, 7, 11, 15, 19) %>%
   rename(geoid = GEO_ID, 
          tot.pop18 = DP05_0021E,
          male.pop18 = DP05_0026E,
          fem.pop18 = DP05_0027E,
          med.inc18 = DP03_0062E,
-         mean.inc18 = DP03_0063E,
-         mean.inc.moe18 = DP03_0063M) %>%
+         mean.inc18 = DP03_0063E) %>%
   mutate(zcta = str_sub(geoid, 10, nchar(geoid)),
          tot.pop18 = as.numeric(tot.pop18),
          male.pop18 = as.numeric(male.pop18),
          fem.pop18 = as.numeric(fem.pop18), 
          med.inc18 = as.numeric(med.inc18),
-         mean.inc18 = as.numeric(mean.inc18),
-         mean.inc.moe18 = as.numeric(mean.inc.moe18)) 
+         mean.inc18 = as.numeric(mean.inc18)) 
 
 
 # (2) Spatial Set Up for Survey Data ------------------------------------------
@@ -976,15 +972,15 @@ ACS2018.df = ACS2018[-1,] %>%
 ##epsg:102003 is USA Contiguous Albers Equal Area Conic
 
 ##Old Data: 
-  ##survey - Survey Data 
-  ##ACS2018.df - ZCTA demographic attributes (no geom) 
+  ##survey - Raw Survey Data 
+  ##ACS2018.df - ZCTA Demographic Attributes 
 
 ##New Data
   ##state fips codes 
 data(state.fips)
 
 ##Data Set of Counties Experiencing Hurricane Wind Speeds 
-wind.swaths = data.table::fread(here("InputData", "Windswath_Original.csv")) %>%
+wind.original = data.table::fread(here("InputData", "Windswath_Original.csv")) %>%
   mutate(index = row_number())
 
 county = sf::st_read(here("InputData", "tl_2019_us_county", "tl_2019_us_county.shp"), 
@@ -994,6 +990,7 @@ county = sf::st_read(here("InputData", "tl_2019_us_county", "tl_2019_us_county.s
   select(statefp = STATEFP,
          countyfp = COUNTYFP, 
          name = NAMELSAD, 
+         GEOID, 
          geometry) %>%
   mutate(county.name = str_to_lower(name, locale = "en")) %>%
   select(-name)
@@ -1006,7 +1003,7 @@ zcta = st_read(here("InputData", "tl_2019_us_zcta510", "tl_2019_us_zcta510.shp")
 
 ##County Name Set Up 
 ## Joining WindSwath to StateFIPS for FIPS ID and State Abb
-wind.swaths.st.fips = left_join(wind.swaths, 
+wind.swaths.st.fips = left_join(wind.original, 
                                 state.fips %>%
                                   select(fips, abb, polyname), 
                                 by = c("state" = "polyname")) %>%
@@ -1021,7 +1018,7 @@ wind.swaths.st.fips = left_join(wind.swaths,
   mutate(unique.name = paste(state, county, sep = " "))
 
 ##Adding State Names to Counties Data Set 
-counties.state = inner_join(counties, 
+counties.state = inner_join(county, 
                             wind.swaths.st.fips %>%
                               select(state, fips) %>%
                               distinct(fips, .keep_all = T),
@@ -1091,16 +1088,16 @@ survey.atts = inner_join(survey.zcta.sf,
                          by = "zcta")
 
 ##State, County and Unique Names(keeps ZCTA geometries) 
-survey.full = st_join(survey.atts, 
+survey.county = st_join(survey.atts, 
                       counties.for.join, 
                       left = F, ##drop ZCTAs not within any counties 
                       join = st_within, ##join by ZCTAs within counties 
                       largest = T)
 
-##Survey Rename 
-survey2 = survey.full 
+##Rename
+survey2 = survey.county 
 
-# (3) Aggregate ZCTA Housing Data ACS(2017) and ZCTA Population Data ACS(2018) -------------------------------------------
+# Aggregate ZCTA Housing Data ACS(2017) and ZCTA Population Data ACS(2018) -------------------------------------------
 
 ##Old Data: 
   ##zcta = ID and Geom for all ZCTA tracks 
@@ -1133,22 +1130,14 @@ county.house = st_join(zcta.house,
                       largest = T, 
                       left = F)
 ##Aggregate Housing by County (GEOID) 
+##Provides Data Set for Estimating WTP (Occupied Housing at County Level)
 agg.county.house = data.table::setDT(county.house)[, county.occ := sum(occ.units), by = GEOID] %>%
-  select(zcta, GEOID, county.occ) %>%
+  select(GEOID, county.occ) %>%
   group_by(GEOID) %>%
   slice(1)  ##Only need row for each County (GEOID)
 
-
 ##Write Out 
-# data.table::fwrite(county.house.total, here("OutputData", "CountyHousingTotal.csv"))
-
-
-survey.house = inner_join(survey2, 
-                          county.house %>%
-                            select(zcta, county.occ, GEOID),
-                          by = "zcta") %>% 
-  mutate(statefp = as.character(str_sub(GEOID, 1, 2)), 
-         countyfp = as.character(str_sub(GEOID, 3, 5)))
+# data.table::fwrite(agg.county.house, here("OutputData", "CountyHousingTotal.csv"))
 
 ##Population Estimates 
 ##adding spatial attributes to zcta populations 
@@ -1167,32 +1156,20 @@ county.pop = st_join(zcta.atts.geo,
                           left = F)
 
 ##Aggregate Population by County 
-agg.county.pop = data.table::setDT(county.pop)[, county.pop := sum(tot.pop), by = GEOID] %>%
-  select(zcta, GEOID, county.pop) %>%
+##Provides Total Population at County Level for WTP per Person Estimates 
+agg.county.pop = data.table::setDT(county.pop)[, county.pop := sum(tot.pop18), by = GEOID] %>%
+  select(GEOID, county.pop) %>%
   group_by(GEOID) %>%
   slice(1) 
-
-names(survey.pop)
-survey.pop = inner_join(survey.house, 
-                        county.pop %>%
-                          select(zcta, tot.pop, GEOID), 
-                        by = "zcta") 
-  
-
 ##Write Out
-# data.table::fwrite(zcta.att.total, here("OutputData", "CountyPopTotal.csv"))
+# data.table::fwrite(agg.county.pop, here("OutputData", "CountyPopTotal.csv"))
 
 
-##Rename Survey 
-survey3 = survey.pop %>%
-  select(-c(GEOID.y)) %>%
-  rename(GEOID = GEOID.x) 
-
-# (4) ZCTA Distance to Shoreline and Hurricane Track --------------------------
+# (3) ZCTA Distance to Shoreline and Hurricane Track --------------------------
 
 ##Old Data:
   ##zcta - ZCTA IDs and Geoms 
-  ##survey3 = Raw Survey + ACS2018 Demographics
+  ##survey2 = Raw Survey + ACS2018 Demographics + State, County Info + Geometry
 
 ##New Data:
   ##State Polygons 
@@ -1213,7 +1190,7 @@ mich.track = st_read(here("InputData", "Michael_TRACK", "AL142018_lin.shp")) %>%
 
 ##Survey ZCTAs with Geoms 
 zcta.dist = zcta %>%
-  filter(zcta %in% survey3$zcta)
+  filter(zcta %in% survey2$zcta)
 
 ##Centroid of ZCTA Polygon 
 zcta.centroid = st_centroid(zcta.dist)
@@ -1227,7 +1204,7 @@ zcta.shore = cbind(zcta.dist, zcta.shore.dist) %>%
   rename(dist.shore = zcta.shore.dist)
 
 ##Survey Florence 
-surv.flo = survey3 %>%
+surv.flo = survey2 %>%
   filter(hurricane == "florence")
 
 ##Florence ZCTAs 
@@ -1253,7 +1230,7 @@ survey.florence = inner_join(surv.flo,
   rename(dist.hurr = zcta.flo.dist) 
 
 ##Survey Michael 
-surv.mich = survey3 %>%
+surv.mich = survey2 %>%
   filter(hurricane == "michael") 
 
 ##Michael ZCTAs 
@@ -1287,19 +1264,14 @@ survey.distance = inner_join(survey.stack,
                         zcta.shore %>%
                           select(zcta, dist.shore), 
                         by =  "zcta")
-##Write Out 
-# data.table::fwrite(survey.distance %>%
-#                      st_drop_geometry(),
-#                    here("OutputData", "SurveyDistances.csv")) 
 
 ##Rename Survey 
-survey4 = survey.distance
+survey3 = survey.distance
 
-# (5) Impacted State Average Demographic Calculations  ----------------------------------------------------
+# (4) Impacted State Average Demographic Calculations  ----------------------------------------------------
 
 ##Old Data: 
-  ## survey4 = Raw Survey + ACS2018 Demographics + ZCTA (Geoms) + StateFP + CountyFP
-  ##          Total County Occupied Housing + Total County Population +
+  ## survey3 = Raw Survey + ACS2018 Demographics + State, County Info + Geometry
   ##          Distance to Shore + Distance to Hurricane Track
   ##ACS2018.df = ACS 5YR 2018 demographic data 
 
@@ -1340,7 +1312,7 @@ us.data = data = readxl::read_excel(here("InputData", "ACSSPP1Y2018",
   select(state, male18up, female18up, avg_housesize, ownr_occ_per, rntr_occ_per, median.age)
 
 ##Including US Averages (based on impacted states) for Relevant Covariates 
-survey5 = survey4 %>%
+survey.USavg = survey3 %>%
   mutate(US_males = mean(us.data$male18up, na.rm = T), 
          US_hh = mean(us.data$avg_housesize, na.rm = T),
          US_ownr = mean(us.data$ownr_occ_per, na.rm = T), 
@@ -1348,13 +1320,15 @@ survey5 = survey4 %>%
          US_inc18 = mean(ACS2018.impacted$mean.inc18, na.rm = T)) 
 
 
-# (6) Adding 2008 Income Averages  ----------------------------------------
+##Rename
+survey4 = survey.USavg 
+
+# (5) Adding 2008 Income Averages  ----------------------------------------
 
 
 ##Old Data: 
-## survey5 = Raw Survey + ACS2018 Demographics + ZCTA (Geoms) + StateFP + CountyFP
-##          Total County Occupied Housing + Total County Population +
-##          Distance to Shore + Distance to Hurricane Track + US Impacted State Demo Avgs 
+## survey4= Raw Survey + ACS2018 Demographics + State, County Info + Geometry
+##          Distance to Shore + Distance to Hurricane Track + US Impacted State Demo Avg 
 
 
 ##New Data: 
@@ -1371,17 +1345,19 @@ inc2011 = data.table::fread(here("InputData", "ACSDP5Y2011", "ACS2011-Inc.csv"))
          zcta = str_sub(geoid, 10, nchar(geoid)))  ##from Jan 2011 to Jan 2018
 
 ##Add Income ACS 5YR 2011 Data to Survey 
-survey6 = left_join(survey5, 
+survey.08inc = left_join(survey4, 
                        inc2011 %>% 
                          select(zcta, mean.inc11, med.inc11), 
                        by = "zcta")
 
-# (7) Hurricane Forecast Errors  ------------------------------------------
+##Rename 
+survey5 = survey.08inc
+
+# (6) Hurricane Forecast Errors  ------------------------------------------
 
 ##Old Datat:
-  ##survey6 = Raw Survey + ACS2018 Demographics + ZCTA (Geoms) + StateFP + CountyFP
-##          Total County Occupied Housing + Total County Population +
-##          Distance to Shore + Distance to Hurricane Track + US Impacted State Demo Avgs +
+## survey5 = Raw Survey + ACS2018 Demographics + State, County Info + Geometry
+##          Distance to Shore + Distance to Hurricane Track + US Impacted State Demo Avg
 ##          ZCTA 2011 Incomes  
 
 ##New Data:
@@ -1390,21 +1366,22 @@ fore.err = data.table::fread(here("InputData", "ALL_swath_wind_differences_in_ti
   mutate(unique.name = paste(state, county, sep = " "))
 
 ##Join Forecast Error for Michael and Florence (Survey Hurricanes) 
-survey7 = left_join(survey6, 
+survey.err = left_join(survey5, 
                        fore.err %>%
                          select(unique.name, hurricane, dif_max, dif_mean, dif_min, dif_median, dif_sd, 
                                 lag), 
                        by = c("unique.name" = "unique.name", "hurricane" = "hurricane")) %>%
   filter(lag == -3) ##72 Hour Forecast Error 
 
+##Rename 
+survey6 = survey.err 
 
-# (8) Averages Demographic Statistics by Maxiumum Experienced Wind --------
+# (7) Averages Demographic Statistics by Maxiumum Experienced Wind --------
 
 ##Old Data: 
-##          survey8 : Raw Survey + ACS2018 Demographics + ZCTA (Geoms) + StateFP + State + 
-##          CountyFP + County + Total County Occupied Housing + Total County Population +
-##          Distance to Shore + Distance to Hurricane Track + US Impacted State Demo Avgs +
-##          ZCTA 2011 Incomes  + 72 Hr Forecast Error 
+## survey5 = Raw Survey + ACS2018 Demographics + State, County Info + Geometry
+##          Distance to Shore + Distance to Hurricane Track + US Impacted State Demo Avg
+##          ZCTA 2011 Incomes + 72 Hr Forecast Error 
 
 
 ##Setting Up Maximum Speed Groups for Impacted Area Cutoffs 
@@ -1430,43 +1407,44 @@ for(i in 1:length(speed)){
 attch.avg = cbind(speed, new.avg)
 
 
-survey8 = survey7 %>%
-  mutate(fem_20 = attch.avg[attch.avg$speed == 20, ]$avg.fem, 
-         fem_30 = attch.avg[attch.avg$speed == 30, ]$avg.fem, 
-         fem_40 = attch.avg[attch.avg$speed == 40, ]$avg.fem,
-         fem_50 = attch.avg[attch.avg$speed == 50, ]$avg.fem, 
-         meaninc_20 = attch.avg[attch.avg$speed == 20, ]$avg.meaninc,
-         meaninc_30 = attch.avg[attch.avg$speed == 30, ]$avg.meaninc,
-         meaninc_40 = attch.avg[attch.avg$speed == 40, ]$avg.meaninc,
-         meaninc_50 = attch.avg[attch.avg$speed == 50, ]$avg.meaninc,
-         ownr_20 = attch.avg[attch.avg$speed == 20, ]$avg.owner,
-         ownr_30 = attch.avg[attch.avg$speed == 30, ]$avg.owner,
-         ownr_40 = attch.avg[attch.avg$speed == 40, ]$avg.owner, 
-         ownr_50 = attch.avg[attch.avg$speed == 50, ]$avg.owner) 
-
+survey.impacted = survey6 %>%
+  mutate(fem_20ws = attch.avg[attch.avg$speed == 20, ]$avg.fem, 
+         fem_30ws = attch.avg[attch.avg$speed == 30, ]$avg.fem, 
+         fem_40ws = attch.avg[attch.avg$speed == 40, ]$avg.fem,
+         fem_50ws = attch.avg[attch.avg$speed == 50, ]$avg.fem, 
+         meaninc_20ws = attch.avg[attch.avg$speed == 20, ]$avg.meaninc,
+         meaninc_30ws = attch.avg[attch.avg$speed == 30, ]$avg.meaninc,
+         meaninc_40ws = attch.avg[attch.avg$speed == 40, ]$avg.meaninc,
+         meaninc_50ws = attch.avg[attch.avg$speed == 50, ]$avg.meaninc,
+         ownr_20ws = attch.avg[attch.avg$speed == 20, ]$avg.owner,
+         ownr_30ws = attch.avg[attch.avg$speed == 30, ]$avg.owner,
+         ownr_40ws = attch.avg[attch.avg$speed == 40, ]$avg.owner, 
+         ownr_50ws = attch.avg[attch.avg$speed == 50, ]$avg.owner) 
 
 ##Write Out Data Set 
-survey.out = survey8 %>%
-  select(##Response Variables, 
+survey.out = survey.impacted %>%
+  select(index, 
+        ##General Location 
+        statefp, state, countyfp, county, unique.name, hurricane, zcta,
+        ##Response Variables, 
         time.seconds = Duration..in.seconds., track_order, wind_order, rain_order, 
         track_order, wind_order, rain_order, track_rate, wind_rate, rain_rate, track_bid1, 
         wind_bid1, rain_bid1, track_answer1, wind_answer1, rain_answer1, track_bid2, 
         wind_bid2, rain_bid2, track_answer2, wind_answer2, rain_answer2, 
-        ##General Location 
-        statefp, state, countyfp, county, unique.name, 
         ##Control Set 1
-         hurricane, zcta, mean.inc18, female, experience, evacuate, voice, action, long_risk,
+        mean.inc18, female, experience, evacuate, voice, action, long_risk,
         ##Control Set 2
          age, owner, tenure, short_risk, hurricane_awareness, fema_awareness, nfip_awareness,
          damage, hh_size, dist.shore, 
         ##Exposure Specific Demo Averages
-        fem_20, fem_30, fem_40, fem_50, meaninc_20, meaninc_30, meaninc_40, meaninc_50, 
-        ownr_20, ownr_30, ownr_40, ownr50, 
+        fem_20ws, fem_30ws, fem_40ws, fem_50ws, meaninc_20ws, meaninc_30ws, meaninc_40ws, 
+        meaninc_50ws, ownr_20ws, ownr_30ws, ownr_40ws, ownr_50ws, 
         ##RR New Covariates 
         tax, personal, worth, costly, trust, 
         mean.inc11, ##pre HFIP funding (2008) 
         US_inc18, ##exposed population
         dif_mean, lag ##mean forecast error 
         )
-data.table::fwrite(survey8, here("OutputData", "Survey_Master.csv"))
+data.table::fwrite(survey.out %>%
+                     st_drop_geometry(), here("OutputData", "Survey_Master.csv"))
 

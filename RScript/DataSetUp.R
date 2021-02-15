@@ -1,4 +1,4 @@
-######### Hurricane Survey Project --
+######### Hurricane Survey Project -- Data Set Creation
 
 
 # Libraries ---------------------------------------------------------------
@@ -952,20 +952,22 @@ survey1 = data %>%
 ACS2018 = data.table::fread(here("InputData", "ACSDP5Y2018", "income_sex_byzip.csv"))
 
 ACS2018.df = ACS2018[-1,] %>%
-  select(1, 3, 7, 11, 15, 19) %>%
+  select(1, 3, 7, 11, 15, 19, 20) %>%
   rename(geoid = GEO_ID, 
          tot.pop18 = DP05_0021E,
          male.pop18 = DP05_0026E,
          fem.pop18 = DP05_0027E,
          med.inc18 = DP03_0062E,
-         mean.inc18 = DP03_0063E) %>%
+         mean.inc18 = DP03_0063E,
+         mean.inc18.moe = DP03_0063M) %>%
   mutate(zcta = str_sub(geoid, 10, nchar(geoid)),
          tot.pop18 = as.numeric(tot.pop18),
          male.pop18 = as.numeric(male.pop18),
          fem.pop18 = as.numeric(fem.pop18), 
          med.inc18 = as.numeric(med.inc18),
-         mean.inc18 = as.numeric(mean.inc18)) 
-
+         mean.inc18 = as.numeric(mean.inc18),
+         mean.inc18.moe = as.numeric(mean.inc18.moe)) 
+data.table::fwrite(ACS2018.df, here("OutputData", "ZCTA_AvgData.csv"))
 
 # (2) Spatial Set Up for Survey Data ------------------------------------------
 
@@ -1137,7 +1139,7 @@ agg.county.house = data.table::setDT(county.house)[, county.occ := sum(occ.units
   slice(1)  ##Only need row for each County (GEOID)
 
 ##Write Out 
-# data.table::fwrite(agg.county.house, here("OutputData", "CountyHousingTotal.csv"))
+data.table::fwrite(agg.county.house, here("OutputData", "CountyHousingTotal.csv"))
 
 ##Population Estimates 
 ##adding spatial attributes to zcta populations 
@@ -1162,7 +1164,7 @@ agg.county.pop = data.table::setDT(county.pop)[, county.pop := sum(tot.pop18), b
   group_by(GEOID) %>%
   slice(1) 
 ##Write Out
-# data.table::fwrite(agg.county.pop, here("OutputData", "CountyPopTotal.csv"))
+data.table::fwrite(agg.county.pop, here("OutputData", "CountyPopTotal.csv"))
 
 
 # (3) ZCTA Distance to Shoreline and Hurricane Track --------------------------
@@ -1392,10 +1394,10 @@ new.avg = data.frame()
 ##Loop Average Demographic based on Maximum Windspeed Experienced 
 for(i in 1:length(speed)){
   avg = windswath %>%
-    filter(bt_speed_max <= speed[i]) %>%
-    group_by(geoid) %>%
-    slice(which.max(bt_speed_max)) %>%
-    ungroup() %>%
+    filter(bt_speed_max <= speed[i]) %>% #filter by max experienced ws 
+    group_by(geoid) %>% #group by state,county distinction 
+    slice(which.max(bt_speed_max)) %>% #remove duplicate county ws experiences, only want max ws 
+    ungroup() %>% #ungroup to capture avg for whole data set exposed to designated ws 
     summarize(avg.fem = mean(femfrac, na.rm = T), 
               avg.meaninc = mean(mean.inc, na.rm = T), 
               avg.medinc = mean(med.inc, na.rm = T), 
@@ -1436,6 +1438,8 @@ survey.out = survey.impacted %>%
         ##Control Set 2
          age, owner, tenure, short_risk, hurricane_awareness, fema_awareness, nfip_awareness,
          damage, hh_size, dist.shore, 
+        ##Map Making 
+        loss, 
         ##Exposure Specific Demo Averages
         fem_20ws, fem_30ws, fem_40ws, fem_50ws, meaninc_20ws, meaninc_30ws, meaninc_40ws, 
         meaninc_50ws, ownr_20ws, ownr_30ws, ownr_40ws, ownr_50ws, 

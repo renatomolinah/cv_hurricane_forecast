@@ -1,2 +1,2 @@
 # cv_hurricane_forecast
-This repository provides the replication files to "The Value of Future Improvements to Hurricane Forecasts"
+This repository provides the replication files to the paper "Striving for Improvement: The Perceived Value of Improving Hurricane Forecast Accuracy" by Molina et al. 

@@ -18,7 +18,7 @@ survey = data.table::fread(here("OutputData", "Survey_Master.csv"),
          countyfp = str_pad(countyfp, 3, side = "left", pad = "0"),
          geoid = paste(statefp, countyfp, sep = ""))
 ##total windswath 
-wind = data.table::fread(here("InputData", "WindSwathMaster.csv"),
+wind = data.table::fread(here("OutputData", "WindSwathMaster.csv"),
                          colClasses = c(statefp = "character", countyfp = "character")) %>%
   mutate(statefp = str_pad(statefp, 2, side = "left", pad = "0"),
          countyfp = str_pad(countyfp, 3, side = "left", pad = "0"),
@@ -74,7 +74,7 @@ for(j in 1:3){
   wtp[4,j] = sum(estimates[4,j]*wind.counties[wind.counties$o30 == 1,]$count.home)
   wtp[5,j] = sum(estimates[5,j]*wind.counties[wind.counties$o20 == 1,]$count.home)
 }
-wtp
+
 ##wtp extrap CI (delta method) 
 for(j in 1:3){
   wtp.se[1,j] = sqrt(sum(survey.counties$count.home)^2*(std.er[1,j]^2))*1.96
@@ -83,7 +83,7 @@ for(j in 1:3){
   wtp.se[4,j] = sqrt(sum(wind.counties[wind.counties$o30 == 1,]$count.home)^2*(std.er[4,j]^2))*1.96
   wtp.se[5,j] = sqrt(sum(wind.counties[wind.counties$o20 == 1,]$count.home)^2*(std.er[5,j]^2))*1.96
 }
-wtp.se
+
 
 ##wtp table section creation 
 twtp = t(wtp) %>% data.frame() %>% rename(Sample = X1, WS50 = X2, WS40 = X3, WS30 = X4, WS20 = X5)
@@ -151,20 +151,20 @@ for(j in 1:3){
   npv.df.se[1,j] = sqrt((multiplier(r)*mean((survey.counties$count.home)/
                                               survey.counties$count.pop))^2*
                           (std.er[1,j]^2))*1.96
-  npv.df.se[2,j] = sqrt((multiplier(r)*mean((wind.counties[wind.counties$o20 == 1,]$count.home)/
-                                              wind.counties[wind.counties$o20 == 1,]$count.pop))^2*
-                          (std.er[2,j]^2))*1.96
-  npv.df.se[3,j] = sqrt((multiplier(r)*mean((wind.counties[wind.counties$o30 == 1,]$count.home)/
-                                              wind.counties[wind.counties$o30 == 1,]$count.pop))^2*
-                          (std.er[3,j]^2))*1.96
-  npv.df.se[4,j] = sqrt((multiplier(r)*mean((wind.counties[wind.counties$o40 == 1,]$count.home)/
-                                              wind.counties[wind.counties$o40 == 1,]$count.pop))^2*
-                          (std.er[4,j]^2))*1.96
-  npv.df.se[5,j] = sqrt((multiplier(r)*mean((wind.counties[wind.counties$o50 == 1,]$count.home)/
+  npv.df.se[2,j] = sqrt((multiplier(r)*mean((wind.counties[wind.counties$o50 == 1,]$count.home)/
                                               wind.counties[wind.counties$o50 == 1,]$count.pop))^2*
+                          (std.er[2,j]^2))*1.96
+  npv.df.se[3,j] = sqrt((multiplier(r)*mean((wind.counties[wind.counties$o40 == 1,]$count.home)/
+                                              wind.counties[wind.counties$o40 == 1,]$count.pop))^2*
+                          (std.er[3,j]^2))*1.96
+  npv.df.se[4,j] = sqrt((multiplier(r)*mean((wind.counties[wind.counties$o30 == 1,]$count.home)/
+                                              wind.counties[wind.counties$o30 == 1,]$count.pop))^2*
+                          (std.er[4,j]^2))*1.96
+  npv.df.se[5,j] = sqrt((multiplier(r)*mean((wind.counties[wind.counties$o20 == 1,]$count.home)/
+                                              wind.counties[wind.counties$o20 == 1,]$count.pop))^2*
                           (std.er[5,j]^2))*1.96
 }
-npv.df.se
+
 
 ##npv table section creation 
 tnpv = t(npv.df) %>% data.frame() %>% rename(Sample = X1, WS50 = X2, WS40 = X3, WS30 = X4, WS20 = X5)
@@ -185,7 +185,7 @@ for(i in 1:nrow(extrap.table)){
 }
 table.out = cbind(rep(c("Storm Track", "Wind Speed", "Precipitation"),3), table1)
 
-#creates table; tidy by hand 
+#creates table; table created by hand in paper 
 kbl(table.out, format = "latex", booktabs = T,
     col.names = c(" ", "Sampled", ">50 mph", ">40 mph", ">30 mph", ">20 mph")) %>%
   group_rows("Total WTP USD", 1, 3) %>%
@@ -198,8 +198,8 @@ kbl(table.out, format = "latex", booktabs = T,
 # Fig 4. Losses and Evacuation Maps --------------
 ##################################################
 
-#restart R
-.rs.restartR()
+#clear data
+rm(list = ls())
 
 ##libraries
 library(tidyverse)
@@ -311,8 +311,8 @@ tmap_save(survey.cov.maps, here("Figures", "CovariatesMap.jpeg"), height = 4.3, 
 # Fig 5. Average WTP Hurricane Forecast Improvement ------
 ###########################################################
 
-#restart R
-.rs.restartR()
+#clear data 
+rm(list = ls())
 
 #libraries
 library(tidyverse)
@@ -354,8 +354,8 @@ ggsave(here("Figures", "Coefficients.eps"), coef.plot, width = 4, height = 3)
 # Fig 6. Past Hurricane Exposure -----
 ######################################
 
-#restart R
-.rs.restartR()
+#clear data 
+rm(list = ls())
 
 #libraries 
 library(cowplot)
@@ -364,7 +364,7 @@ library(sf)
 library(tidyverse)
 
 ##data 
-wind = data.table::fread(here("InputData", "WindSwathMaster.csv"),
+wind = data.table::fread(here("OutputData", "WindSwathMaster.csv"),
                          colClasses = c(statefp = "character", countyfp = "character")) %>%
   mutate(statefp = str_pad(statefp, 2, side = "left", pad = "0"),
          countyfp = str_pad(countyfp, 3, side = "left", pad = "0"),

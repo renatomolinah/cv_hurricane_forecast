@@ -191,7 +191,7 @@ kbl(table.out, format = "latex", booktabs = T,
   group_rows("Total WTP USD", 1, 3) %>%
   group_rows("Per-Capita WTP", 4, 6) %>%
   group_rows("PV USD", 7, 9) %>%
-  write(here("Figures", "Table1-Main.tex"))
+  write(here("Table1-Main.tex"))
   
   
 ##################################################
@@ -305,7 +305,7 @@ loss.map = tm_shape(state.survey) +
             legend.position = c(.60, .43), inner.margins = c(0.01, .01, .01, .01)) 
 ## Join Evacuation and Loss Maps 
 survey.cov.maps = tmap_arrange(evac.map, loss.map, nrow = 1, asp = NULL)
-tmap_save(survey.cov.maps, here("Figures", "CovariatesMap.jpeg"), height = 4.3, width = 7)
+tmap_save(survey.cov.maps, here("CovariatesMap.jpeg"), height = 4.3, width = 7)
 
 ###########################################################
 # Fig 5. Average WTP Hurricane Forecast Improvement ------
@@ -420,7 +420,7 @@ wind.map = ggplot() +
   scale_fill_manual(values = color.code, labels = key) +
   labs(title = NULL, fill = "Maximum Winds")
 
-ggsave(here("Figures", "WindSpeedMap.jpeg"), wind.map, width = 4.5, height = 4)
+ggsave(here("WindSpeedMap.jpeg"), wind.map, width = 4.5, height = 4)
 
 
 

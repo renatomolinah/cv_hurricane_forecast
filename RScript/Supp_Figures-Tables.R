@@ -46,7 +46,7 @@ stack.yn %>%
   pack_rows("Rain", 1, 5) %>%
   pack_rows("Track", 6, 10) %>%
   pack_rows("Wind", 11, 15) 
-  save_kable(file = here("Tables", "Flor_Yes-No.tex"))
+  save_kable(file = here("Flor_Yes-No.tex"))
 
   ##Michael yes/no total
   stack.yn %>%
@@ -61,7 +61,7 @@ stack.yn %>%
     pack_rows("Rain", 1, 5) %>%
     pack_rows("Track", 6, 10) %>%
     pack_rows("Wind", 11, 15)  %>%
-    save_kable(file = here("Tables", "Mich_Yes-No.tex"))
+    save_kable(file = here("Mich_Yes-No.tex"))
   
 ####################################################
 # Table S10. Representative Survey Response --------
@@ -266,7 +266,7 @@ rep.table.out %>%
   kbl(format = "latex", booktabs = T, col.names = c("Demographics", "Mean", "Mean", "Difference", "Mean", "Difference",
                                                     "Mean", "Difference")) %>%
   add_header_above(linebreak(c(" " = 1, "Exposed Population" = 1, "Full Survey" = 2, "Florence" = 2, "Michael" = 2))) %>%
-  save_kable(here("Figures", "Representative-Table.tex"))
+  save_kable(here("Representative-Table.tex"))
 
 ##Notes - Need to add stars based on p-values and adjust Income to be 1e3 
 
@@ -319,7 +319,7 @@ exposed.plot = ggplot(exposed.wtp,
     legend.title = element_text(size = 5.5),
     legend.text = element_text(size = 5.5)) 
 
-ggsave(here("Figures", "WTP-SamplevsExposed_Plot.eps"), exposed.plot, width = 4, height = 3)
+ggsave(here("WTP-SamplevsExposed_Plot.eps"), exposed.plot, width = 4, height = 3)
 
 ################################################
 # Figure S2. SB vs DB Estimates ----------------
@@ -371,7 +371,7 @@ myplot2 = ggplot(estimates2, aes(x = factor(wtp, levels = c("Track", "Wind", "Ra
         legend.title = element_text(size = 5.5),
         legend.text = element_text(size = 5.5)) 
 
-ggsave(here("Figures", "figure_comparison_single.eps"), myplot2, width = 4, height = 3) 
+ggsave(here("figure_comparison_single.eps"), myplot2, width = 4, height = 3) 
 
 ################################################
 # Figure S3. Compare Income Levels ------------
@@ -422,7 +422,7 @@ inc.plot = ggplot(income.wtp,
     legend.title = element_text(size = 5.5),
     legend.text = element_text(size = 5.5)) 
 
-ggsave(here("Figures", "income.source.eps"), inc.plot, width = 4, height = 3)
+ggsave(here("income.source.eps"), inc.plot, width = 4, height = 3)
 
 ################################################
 # Figure S4. Compare Order Specification -------
@@ -474,7 +474,7 @@ comp.plot = ggplot(disc.est %>% filter(Method != "Single Bound"),
     legend.title = element_text(size = 5.5),
     legend.text = element_text(size = 5.5)) 
 
-ggsave(here("Figures", "figure_comparison_order.eps"), comp.plot, width = 4, height = 3)
+ggsave(here("figure_comparison_order.eps"), comp.plot, width = 4, height = 3)
 
 ################################################
 # Figure S5. Compare with Extra Controls -------
@@ -527,6 +527,6 @@ control.plot = ggplot(controls.wtp,
     legend.title = element_text(size = 5.5),
     legend.text = element_text(size = 5.5)) 
 
-ggsave(here("Figures", "WTP-Inc2018vsExtraControls_Plot.eps"), control.plot, width = 4, height = 3)
+ggsave(here("WTP-Inc2018vsExtraControls_Plot.eps"), control.plot, width = 4, height = 3)
 
 

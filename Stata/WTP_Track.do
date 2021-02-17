@@ -1,14 +1,19 @@
+/******************************  METADATA *********************************
+Replication for Molina, Letson, McNoldy, Mozumder, and Varkony, 2021.
+"Striving for Improvement: The Perceived Value of Improving Hurricane Forecast Accuracy".
+Script Description: This STATA script generates all Storm Track estimates in the main paper. Code developed for STATA v16.
+Date: February, 2021
+**************************************************************************/
+
 #delimit ;
-
 clear all;
-
 set more off;
 
-* Set up;
+/****************************** Setup *********************************/;
 
-use "YOUR_FOLDER/data.dta";
+use "YOUR_DATA_FOLDER/data.dta";
 
-cd "YOUR_FOLDER2/Tables";
+cd "YOUR_TABLE_FOLDER/Tables";
 
 destring, replace;
 
@@ -20,6 +25,8 @@ global X1 income female experience evacuate voice action long_risk;
 
 global X2 age owner tenure short_risk hurricane_awareness fema_awareness
 	nfip_awareness damage hh_size  c_dist;
+	
+/******************************  Analysis *********************************/;	
 
 * BOTH STORMS;
 
@@ -341,9 +348,13 @@ eststo wtp33:quietly nlcom
 			)),
 			post noheader;
 	estadd local pref "X";
-	estadd local add "X";				
+	estadd local add "X";		
 	
-* Labels	;
+/******************************  Output *********************************/;		
+	
+* Labels;
+
+* Control set 1;
 
 label variable track_order "Order";
 label variable track_rate "Rate";	

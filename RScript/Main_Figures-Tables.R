@@ -218,12 +218,12 @@ survey = data.table::fread(here("OutputData", "Survey_Master.csv"),
          loss = ifelse(is.na(loss), "", loss),
          loss = as.factor(loss))
 
-county = st_read(here("InputData", "tl_2019_us_county", "tl_2019_us_county.shp"))
+county = st_read(here("InputData", "county_reduced.gpkg"))
 county$GEOID = as.character(county$GEOID)
 
 survey.sf = inner_join(survey, 
                        county %>%
-                         select(GEOID, geometry), 
+                         select(GEOID, geom), 
                        by = c("geoid" = "GEOID")) %>%
   st_as_sf() %>%
   st_transform('ESRI:102003') ##epsg:102003 is USA Contiguous Albers Equal Area Conic
@@ -370,7 +370,7 @@ wind = data.table::fread(here("OutputData", "WindSwathMaster.csv"),
          countyfp = str_pad(countyfp, 3, side = "left", pad = "0"),
          geoid = paste(statefp, countyfp, sep = ""))
 
-county = st_read(here("InputData", "tl_2019_us_county", "tl_2019_us_county.shp"))
+county = st_read(here("InputData", "county_reduced.gpkg"))
 county$GEOID = as.character(county$GEOID)
 
 states = st_read(here("InputData", "tl_2019_us_state", "tl_2019_us_state.shp")) %>%
@@ -396,7 +396,7 @@ wind.uniq = wind.cat %>%
 ##attach county geographies 
 wind.geo = inner_join(wind.uniq, 
                       county %>%
-                        select(GEOID, geometry),
+                        select(GEOID, geom),
                       by = c("geoid" = "GEOID")) %>%
   st_as_sf() %>%
   st_transform('ESRI:102003')

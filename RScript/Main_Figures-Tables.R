@@ -22,9 +22,7 @@ wind = data.table::fread(here("OutputData", "WindSwathMaster.csv"),
                          colClasses = c(statefp = "character", countyfp = "character")) %>%
   mutate(statefp = str_pad(statefp, 2, side = "left", pad = "0"),
          countyfp = str_pad(countyfp, 3, side = "left", pad = "0"),
-         geoid = paste(statefp, countyfp, sep = ""),
-         med.inc = as.numeric(med.inc), 
-         mean.inc = as.numeric(mean.inc))
+         geoid = paste(statefp, countyfp, sep = ""))
 
 ##population count per county 
 county.pop = data.table::fread(here("OutputData/CountyPopTotal.csv"),
